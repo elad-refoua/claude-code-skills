@@ -46,9 +46,9 @@ When `--comments` is passed, the script adds Word bubble comment annotations to 
 | Color | Comment |
 |-------|---------|
 | Yellow (body) | "Citation not found in reference list" |
-| Cyan (body) | "Fuzzy year match — verify correct year" |
+| Cyan (body) | Specific advice, e.g. "Cited as 1912 → reference list has 1912a, 1912b" |
 | Red (refs) | "Reference not cited in body text" |
-| Cyan (refs) | "Fuzzy match — verify correct year" |
+| Cyan (refs) | Specific advice, e.g. "Listed as 1912 → cited in text as 1912a, 1912b" |
 
 After Opus verification, additional comments can be added via `--add-comments` (see Step 8).
 
