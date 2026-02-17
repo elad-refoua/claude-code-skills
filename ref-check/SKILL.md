@@ -190,7 +190,7 @@ UNCITED REFERENCES (RED): {uncited_references list}
 Return ONLY valid JSON:
 {
   "missed_citations": [{"citation": "Author (Year)", "location": "context", "reference_exists": true/false}],
-  "false_positives": ["citation1"],
+  "false_positives": [{"text": "Author (Year)", "reason": "why not a real citation"}],
   "cross_matches": [{"citation": "Author (Year)", "reference": "Author (Year)", "reason": "explanation"}],
   "confirmed_uncited_refs": ["ref1"],
   "possibly_cited_refs": [{"reference": "Author (Year)", "evidence": "how cited"}],
@@ -204,8 +204,20 @@ Return ONLY valid JSON:
 Show the user:
 - **Regex results**: counts of green, cyan, yellow, red
 - **Sonnet findings**: citations Sonnet found that regex missed, and which matched refs
-- **Opus verification**: missed citations, false positives, cross-matches, confirmed uncited
+- **Opus verification**: summarize each category from the JSON output
 - Path to output files
+
+**Opus output keys and how to use them:**
+
+| Key | Claude Code action |
+|-----|--------------------|
+| `missed_citations` | Report to user (citations regex+Sonnet both missed) |
+| `confirmed_uncited_refs` | Report to user (truly uncited references) |
+| `cross_matches` | Report + inject as comments via Step 8 |
+| `false_positives` | Report + inject as comments via Step 8 |
+| `fuzzy_comments` | Inject as comments via Step 8 |
+| `possibly_cited_refs` | Report + inject as comments via Step 8 |
+| `other_issues` | Report + inject as comments via Step 8 |
 
 ### Step 8: Add Opus findings as comments (optional)
 
@@ -219,7 +231,7 @@ The findings JSON should have this structure (matching the Opus output from Step
 ```json
 {
   "cross_matches": [{"citation": "Author (Year)", "reference": "Author (Year)", "reason": "..."}],
-  "false_positives": ["citation1"],
+  "false_positives": [{"text": "Author (Year)", "reason": "..."}],
   "possibly_cited_refs": [{"reference": "Author (Year)", "evidence": "..."}],
   "fuzzy_comments": [{"citation": "Author (Year)", "comment": "Specific advice about the year mismatch"}],
   "other_issues": ["issue1"]
@@ -227,6 +239,20 @@ The findings JSON should have this structure (matching the Opus output from Step
 ```
 
 This adds comments authored "ref-check (Opus)" to the matching text spans in the document. The document is saved in-place.
+
+### Step 9: Save learnings for future runs (optional)
+
+After Opus returns its findings, persist cross-matches and noise words so future runs auto-resolve them:
+
+```bash
+py "C:/Users/user/.claude/skills/ref-check/ref_check.py" --save-learnings "<findings.json>"
+```
+
+This extracts from the Opus findings JSON:
+- `cross_matches` → saved as learned cross-match patterns (auto-resolved as cyan on next run)
+- `false_positives` → single-word surnames saved as noise words (filtered during regex extraction on next run)
+
+Learnings merge into `learned_patterns.json` without duplicates.
 
 ## Important Notes
 - The Python script does regex + highlighting only, NO API calls needed
@@ -239,11 +265,21 @@ This adds comments authored "ref-check (Opus)" to the matching text spans in the
 
 ## Self-Learning System
 
-The script loads `learned_patterns.json` from the skill folder:
-- **Noise words**: previously identified false positives, filtered during regex extraction
-- **Cross-matches**: known citation-reference pairs with different years, auto-resolved as cyan
+The script uses `learned_patterns.json` (in the skill folder) to improve across runs.
 
-Claude Code can update this file after sub-agent verification to save learnings for future runs.
+**Lifecycle**: Load on startup → apply during regex → Opus verifies → save learnings → next run benefits.
+
+### Data stored
+- **Noise words**: false positive surnames (e.g., "Cognitive") — filtered out during regex extraction
+- **Cross-matches**: citation-reference pairs with different years (e.g., cited as 1953, ref has 1940) — auto-resolved as cyan
+
+### CLI commands
+- **Load** (automatic): On every run, `load_learned_patterns()` reads the file. Console shows `[LEARN] Loaded N noise words, M cross-matches from memory`.
+- **Save** (Step 9): `py ref_check.py --save-learnings <findings.json>` extracts patterns from Opus output and merges into the file.
+
+### Conservative learning
+- Noise words generalize across papers (a false positive in one paper is likely false in all)
+- Cross-matches only fire when BOTH the citation AND the reference exist in the current paper
 
 ## Citation Patterns (Regex)
 - Parenthetical: `(Author, Year)`, `(Author, Year; Author2, Year2)`

@@ -41,7 +41,7 @@ def find_references_heading_index(doc):
 def extract_sentences_with_citations(body_text):
     """
     Extract sentences that contain citations, along with the citation info.
-    Returns list of dicts: {sentence, citations: [(author, year), ...], paragraph_num}
+    Returns list of dicts: {sentence, citations: [(author, year), ...]}
     """
     text = normalize_text(body_text)
     paragraphs = text.split('\n\n')
@@ -95,7 +95,6 @@ def extract_sentences_with_citations(body_text):
                 results.append({
                     'sentence': sentence[:500],
                     'citations': unique_cites,
-                    'paragraph_num': para_num
                 })
 
     return results

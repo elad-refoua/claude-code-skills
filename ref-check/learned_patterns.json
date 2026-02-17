@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "noise_words": [],
+  "cross_matches": [
+    {
+      "author": "Beck",
+      "cite_year": "1976",
+      "ref_year": "1979",
+      "reason": "Same book 'Cognitive Therapy and the Emotional Disorders' - originally published 1976 (IUP), reprinted 1979 (Penguin). Update reference to 1976 or body citation to 1979."
+    },
+    {
+      "author": "Greenberg",
+      "cite_year": "2015",
+      "ref_year": "2011",
+      "reason": "EFT book 2nd edition (2015) cited in body, but only 1st edition (2011) in references. Add 2015 edition to references or change body citation to 2011."
+    },
+    {
+      "author": "Kernberg",
+      "cite_year": "1975",
+      "ref_year": "1985",
+      "reason": "'Borderline Conditions and Pathological Narcissism' - originally 1975 (Jason Aronson), reference list has 1985 reprint. Update reference to 1975 or body citation to 1985."
+    },
+    {
+      "author": "Rafaeli",
+      "cite_year": "2011",
+      "ref_year": "2010",
+      "reason": "Year typo. 'Schema therapy: Distinctive features' was published 2010. Body incorrectly cites 2011. Fix body citation to 2010."
+    }
+  ]
+}

@@ -20,7 +20,6 @@ import copy
 import json
 from pathlib import Path
 from docx import Document
-from docx.shared import RGBColor
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
@@ -42,14 +41,6 @@ def set_highlight(run, color_index):
         highlight = OxmlElement("w:highlight")
         rPr.append(highlight)
     highlight.set(qn("w:val"), color_index)
-
-
-def remove_highlight(run):
-    """Remove highlight from a run."""
-    rPr = run._r.get_or_add_rPr()
-    highlight = rPr.find(qn("w:highlight"))
-    if highlight is not None:
-        rPr.remove(highlight)
 
 
 # ---------------------------------------------------------------------------
@@ -479,14 +470,6 @@ def get_body_paragraphs(doc, ref_para_idx):
                         seen.add(cid)
                         result.extend(cell.paragraphs)
     return result
-
-
-def get_plain_text(doc):
-    """Get all text from document paragraphs."""
-    parts = []
-    for para in doc.paragraphs:
-        parts.append(para.text)
-    return '\n'.join(parts)
 
 
 def find_references_heading_index(doc):
@@ -1102,6 +1085,63 @@ def apply_learned_cross_matches(learned, unmatched_citations, uncited_refs):
     return auto_matches
 
 
+def save_learnings_from_findings(findings_json_path):
+    """Extract and persist learnable patterns from Opus verification results.
+
+    Called by Claude Code after Opus verification:
+      py ref_check.py --save-learnings <findings.json>
+    """
+    path = Path(findings_json_path)
+    if not path.exists():
+        print(f"[LEARN] File not found: {path}")
+        return
+
+    with open(path, 'r', encoding='utf-8') as f:
+        findings = json.load(f)
+
+    learned = load_learned_patterns()
+    existing_cm = {(cm['author'].lower(), cm['cite_year'], cm['ref_year'])
+                   for cm in learned.get('cross_matches', [])}
+    added_cm = 0
+    added_nw = 0
+
+    # Extract cross-matches
+    for cm in findings.get('cross_matches', []):
+        cite = cm.get('citation', '')
+        ref = cm.get('reference', '')
+        reason = cm.get('reason', '')
+        cite_m = re.match(r'(\w[\w-]*)\s*\((\d{4}[a-z]?)\)', cite)
+        ref_m = re.match(r'(\w[\w-]*)\s*\((\d{4}[a-z]?)\)', ref)
+        if cite_m and ref_m:
+            author = cite_m.group(1)
+            cite_year = cite_m.group(2)
+            ref_year = ref_m.group(2)
+            key = (author.lower(), cite_year, ref_year)
+            if key not in existing_cm:
+                learned['cross_matches'].append({
+                    'author': author,
+                    'cite_year': cite_year,
+                    'ref_year': ref_year,
+                    'reason': reason
+                })
+                existing_cm.add(key)
+                added_cm += 1
+
+    # Extract noise words from false positives (single-word patterns only)
+    existing_nw = set(w.lower() for w in learned.get('noise_words', []))
+    for fp in findings.get('false_positives', []):
+        text = fp.get('text', fp) if isinstance(fp, dict) else fp
+        word = text.strip().split('(')[0].strip()
+        if ' ' not in word and word.lower() not in existing_nw and len(word) > 1:
+            learned['noise_words'].append(word.lower())
+            existing_nw.add(word.lower())
+            added_nw += 1
+
+    save_learned_patterns(learned)
+    print(f"[LEARN] Saved {added_cm} cross-match(es), {added_nw} noise word(s)")
+    print(f"[LEARN] File: {LEARNED_PATTERNS_FILE}")
+
+
 # ---------------------------------------------------------------------------
 # Legend insertion
 # ---------------------------------------------------------------------------
@@ -1164,15 +1204,17 @@ def add_findings_comments(docx_path, findings_json_path):
     Called by Claude Code after Opus verification:
       py ref_check.py --add-comments <REF_CHECK.docx> <findings.json>
 
-    findings.json format:
+    findings.json keys consumed by this function:
     {
       "cross_matches": [{"citation": "...", "reference": "...", "reason": "..."}],
       "false_positives": [{"text": "...", "reason": "..."}],
-      "possibly_cited_refs": [{"reference": "...", "evidence": "..."}],
       "fuzzy_comments": [{"citation": "...", "comment": "..."}],
-      "other_issues": ["issue1"],
-      "additional": [{"text": "...", "note": "..."}]
+      "possibly_cited_refs": [{"reference": "...", "evidence": "..."}],
+      "other_issues": ["issue text mentioning Author (Year)"]
     }
+
+    Keys NOT consumed here (used by Claude Code for reporting only):
+      missed_citations, confirmed_uncited_refs
     """
     from docx.table import Table
     from docx.text.paragraph import Paragraph
@@ -1249,19 +1291,27 @@ def add_findings_comments(docx_path, findings_json_path):
             if find_and_comment(search, f"Possibly cited: {evidence}"):
                 added += 1
 
-    for item in findings.get('additional', []):
-        text = item.get('text', '')
-        note = item.get('note', '')
-        if text and note:
-            search = text.split('(')[0].strip()
-            if find_and_comment(search, note):
-                added += 1
+    for issue in findings.get('other_issues', []):
+        if isinstance(issue, str) and issue.strip():
+            m = re.search(r'([A-Z][a-z]+(?:-[A-Z][a-z]+)?)\s*\(', issue)
+            if m:
+                if find_and_comment(m.group(1), f"Issue: {issue}"):
+                    added += 1
 
     doc.save(str(docx_path))
     print(f"[COMMENTS] Added {added} Opus findings comments to: {docx_path}")
 
 
 def main():
+    # Handle --save-learnings sub-command
+    if '--save-learnings' in sys.argv:
+        idx = sys.argv.index('--save-learnings')
+        if idx + 1 < len(sys.argv):
+            save_learnings_from_findings(sys.argv[idx + 1])
+        else:
+            print("Usage: py ref_check.py --save-learnings <findings.json>")
+        sys.exit(0)
+
     # Handle --add-comments sub-command
     if '--add-comments' in sys.argv:
         idx = sys.argv.index('--add-comments')
