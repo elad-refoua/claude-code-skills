@@ -559,13 +559,8 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
-            if add_comments and color != GREEN_HIGHLIGHT:
-                if color == YELLOW_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list"
-                else:
-                    _, mk = fuzzy_match_citation(surname, year, ref_set, ref_fuzzy_lookup)
-                    cmsg = build_fuzzy_body_comment(surname, year, mk, ref_fuzzy_lookup)
-                add_comment_to_span(doc, para, span_start, span_end, cmsg)
+            if add_comments and color == YELLOW_HIGHLIGHT:
+                add_comment_to_span(doc, para, span_start, span_end, "Citation not found in reference list")
 
         # --- 4b. Multi-citation bracket block: [Author, Year; Author2, Year2] ---
         for m in re.finditer(r'\[([^\]]*\d{4}[^\]]*;[^\]]*)\]', full_text):
@@ -614,9 +609,8 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
-                if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
-                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
+                if add_comments and color == YELLOW_HIGHLIGHT:
+                    add_comment_to_span(doc, para, span_start, span_end, "Citation not found in reference list")
 
         # --- Parenthetical citations: (Author, Year; Author2, Year2) ---
         #     Supports author inheritance: (Gelso, 2009; 2014) → both are Gelso
@@ -671,9 +665,8 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
-                if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
-                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
+                if add_comments and color == YELLOW_HIGHLIGHT:
+                    add_comment_to_span(doc, para, span_start, span_end, "Citation not found in reference list")
 
         # --- Narrative citations: Author (Year) or Author et al. (Year) ---
         # Handles hyphenated names like Kabat-Zinn, optional first name,
@@ -719,9 +712,8 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
-            if add_comments and color != GREEN_HIGHLIGHT:
-                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
-                add_comment_to_span(doc, para, span_start, span_end, cmsg)
+            if add_comments and color == YELLOW_HIGHLIGHT:
+                add_comment_to_span(doc, para, span_start, span_end, "Citation not found in reference list")
 
         # --- Possessive citations: Author's ... (Year1, Year2; OtherAuthor, Year) ---
         # Negative lookahead prevents crossing another Author's boundary
@@ -783,9 +775,8 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
-                if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
-                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
+                if add_comments and color == YELLOW_HIGHLIGHT:
+                    add_comment_to_span(doc, para, span_start, span_end, "Citation not found in reference list")
 
         # --- "Author and colleagues" pattern ---
         for m in re.finditer(
@@ -841,9 +832,8 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
-                if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
-                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
+                if add_comments and color == YELLOW_HIGHLIGHT:
+                    add_comment_to_span(doc, para, span_start, span_end, "Citation not found in reference list")
 
         # --- Lowercase narrative citations: stiles (2009) ---
         for m in re.finditer(
@@ -886,9 +876,8 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
-            if add_comments and color != GREEN_HIGHLIGHT:
-                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
-                add_comment_to_span(doc, para, span_start, span_end, cmsg)
+            if add_comments and color == YELLOW_HIGHLIGHT:
+                add_comment_to_span(doc, para, span_start, span_end, "Citation not found in reference list")
 
     return matched, fuzzy_matched, unmatched, unmatched_list, fuzzy_list
 
@@ -956,40 +945,6 @@ def highlight_span_in_paragraph(para, char_start, char_end, color_index):
         pos += run_len
 
 
-def build_fuzzy_body_comment(surname, year, matched_key, ref_fuzzy_lookup):
-    """Build specific comment for a fuzzy year match in body citation."""
-    base = strip_year_suffix(year)
-    candidates = ref_fuzzy_lookup.get((surname, base), [])
-    ref_years = sorted(set(ry for _, ry in candidates if ry != year))
-    if ref_years:
-        return f"Cited as {year} \u2192 reference list has {', '.join(ref_years)}"
-    elif matched_key:
-        return f"Cited as {year} \u2192 reference list has {matched_key[1]}"
-    return "Fuzzy year match"
-
-
-def build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup):
-    """Build specific comment for fuzzy matches in a multi-citation block."""
-    parts = []
-    for s, y in block_citations:
-        mt, mk = fuzzy_match_citation(s, y, ref_set, ref_fuzzy_lookup)
-        if mt == 'fuzzy':
-            parts.append(build_fuzzy_body_comment(s, y, mk, ref_fuzzy_lookup))
-    return "; ".join(parts) if parts else "Fuzzy year match"
-
-
-def build_fuzzy_ref_comment(surname, year, matched_key, citation_fuzzy_lookup):
-    """Build specific comment for a fuzzy year match in reference."""
-    base = strip_year_suffix(year)
-    candidates = citation_fuzzy_lookup.get((surname, base), [])
-    cite_years = sorted(set(cy for _, cy in candidates if cy != year))
-    if cite_years:
-        return f"Listed as {year} \u2192 cited in text as {', '.join(cite_years)}"
-    elif matched_key:
-        return f"Listed as {year} \u2192 cited in text as {matched_key[1]}"
-    return "Fuzzy match"
-
-
 def add_comment_to_span(doc, para, char_start, char_end, comment_text, author="ref-check"):
     """Add a Word bubble comment anchored to runs in [char_start, char_end).
     Requires python-docx >= 1.2.0. Silently skips if comment fails."""
@@ -1039,7 +994,7 @@ def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup,
         if not surname:
             continue
 
-        match_type, matched_key = fuzzy_match_reference(surname, year, citation_set, citation_fuzzy_lookup)
+        match_type, _ = fuzzy_match_reference(surname, year, citation_set, citation_fuzzy_lookup)
 
         if match_type == 'exact':
             cited_count += 1
@@ -1061,12 +1016,8 @@ def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup,
             span_end = len(para.text)
 
         highlight_span_in_paragraph(para, 0, span_end, color)
-        if add_comments and color != GREEN_HIGHLIGHT:
-            if color == RED_HIGHLIGHT:
-                cmsg = "Reference not cited in body text"
-            else:
-                cmsg = build_fuzzy_ref_comment(surname, year, matched_key, citation_fuzzy_lookup)
-            add_comment_to_span(doc, para, 0, span_end, cmsg)
+        if add_comments and color == RED_HIGHLIGHT:
+            add_comment_to_span(doc, para, 0, span_end, "Reference not cited in body text")
 
     return cited_count, fuzzy_count, uncited_count, uncited_list, fuzzy_list
 
@@ -1217,6 +1168,9 @@ def add_findings_comments(docx_path, findings_json_path):
     {
       "cross_matches": [{"citation": "...", "reference": "...", "reason": "..."}],
       "false_positives": [{"text": "...", "reason": "..."}],
+      "possibly_cited_refs": [{"reference": "...", "evidence": "..."}],
+      "fuzzy_comments": [{"citation": "...", "comment": "..."}],
+      "other_issues": ["issue1"],
       "additional": [{"text": "...", "note": "..."}]
     }
     """
@@ -1278,6 +1232,22 @@ def add_findings_comments(docx_path, findings_json_path):
         search = text.split('(')[0].strip()
         if find_and_comment(search, f"Not a real citation: {reason}"):
             added += 1
+
+    for fc in findings.get('fuzzy_comments', []):
+        cite = fc.get('citation', '')
+        comment = fc.get('comment', '')
+        if cite and comment:
+            search = cite.split('(')[0].strip()
+            if find_and_comment(search, comment):
+                added += 1
+
+    for pr in findings.get('possibly_cited_refs', []):
+        ref = pr.get('reference', '')
+        evidence = pr.get('evidence', '')
+        if ref and evidence:
+            search = ref.split('(')[0].strip()
+            if find_and_comment(search, f"Possibly cited: {evidence}"):
+                added += 1
 
     for item in findings.get('additional', []):
         text = item.get('text', '')

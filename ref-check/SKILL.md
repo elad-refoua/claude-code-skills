@@ -41,16 +41,26 @@ The script extracts text from **both paragraphs and table cells** in the body of
 
 ## Comment Bubbles
 
-When `--comments` is passed, the script adds Word bubble comment annotations to non-green items:
+Comments come from two sources:
+
+### 1. Script comments (`--comments` flag)
+The Python script adds **factual** bubble comments for clear-cut issues:
 
 | Color | Comment |
 |-------|---------|
 | Yellow (body) | "Citation not found in reference list" |
-| Cyan (body) | "Cited as {year} → reference list has {year_variants}" |
 | Red (refs) | "Reference not cited in body text" |
-| Cyan (refs) | "Listed as {year} → cited in text as {year_variants}" |
 
-After Opus verification, additional comments can be added via `--add-comments` (see Step 8).
+Cyan (fuzzy match) items do NOT get script-generated comments — they require contextual advice.
+
+### 2. LLM comments (`--add-comments`, Step 8)
+After the Opus sub-agent verifies results, it generates **contextual advice** comments that are injected via `--add-comments`. These include:
+- Fuzzy match advice (e.g., which year suffix a/b/c to use)
+- Cross-match explanations (citation ↔ reference with different years)
+- False positive notes
+- Other issues found during verification
+
+This separation ensures factual comments are fast (regex) while advisory comments benefit from LLM judgment.
 
 ## How to Run
 
@@ -174,7 +184,8 @@ UNCITED REFERENCES (RED): {uncited_references list}
 2. **FALSE POSITIVES**: Any YELLOW items that are NOT real citations?
 3. **CROSS-MATCHES**: Can any YELLOW citation match a RED reference? (year typos, editions, spelling)
 4. **RED VERIFICATION (CRITICAL)**: For EACH red reference, is it cited ANYWHERE in ANY form?
-5. **OTHER ISSUES**: Duplicates, formatting problems, year inconsistencies.
+5. **FUZZY MATCH ADVICE**: For each CYAN item, write a specific comment explaining the year mismatch and advising which year/suffix to use (e.g., "Cited as Freud (1912) but reference list has Freud (1912a) and Freud (1912b) — verify which edition is intended").
+6. **OTHER ISSUES**: Duplicates, formatting problems, year inconsistencies.
 
 Return ONLY valid JSON:
 {
@@ -183,6 +194,7 @@ Return ONLY valid JSON:
   "cross_matches": [{"citation": "Author (Year)", "reference": "Author (Year)", "reason": "explanation"}],
   "confirmed_uncited_refs": ["ref1"],
   "possibly_cited_refs": [{"reference": "Author (Year)", "evidence": "how cited"}],
+  "fuzzy_comments": [{"citation": "Author (Year)", "comment": "Specific advice about the year mismatch"}],
   "other_issues": ["issue1"]
 }
 ```
@@ -209,6 +221,7 @@ The findings JSON should have this structure (matching the Opus output from Step
   "cross_matches": [{"citation": "Author (Year)", "reference": "Author (Year)", "reason": "..."}],
   "false_positives": ["citation1"],
   "possibly_cited_refs": [{"reference": "Author (Year)", "evidence": "..."}],
+  "fuzzy_comments": [{"citation": "Author (Year)", "comment": "Specific advice about the year mismatch"}],
   "other_issues": ["issue1"]
 }
 ```
