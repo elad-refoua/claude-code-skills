@@ -560,7 +560,11 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
             if add_comments and color != GREEN_HIGHLIGHT:
-                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                if color == YELLOW_HIGHLIGHT:
+                    cmsg = "Citation not found in reference list"
+                else:
+                    _, mk = fuzzy_match_citation(surname, year, ref_set, ref_fuzzy_lookup)
+                    cmsg = build_fuzzy_body_comment(surname, year, mk, ref_fuzzy_lookup)
                 add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- 4b. Multi-citation bracket block: [Author, Year; Author2, Year2] ---
@@ -611,7 +615,7 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
                 if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
                     add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Parenthetical citations: (Author, Year; Author2, Year2) ---
@@ -668,7 +672,7 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
                 if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
                     add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Narrative citations: Author (Year) or Author et al. (Year) ---
@@ -716,7 +720,7 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
             if add_comments and color != GREEN_HIGHLIGHT:
-                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
                 add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Possessive citations: Author's ... (Year1, Year2; OtherAuthor, Year) ---
@@ -780,7 +784,7 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
                 if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
                     add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- "Author and colleagues" pattern ---
@@ -838,7 +842,7 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
                 if add_comments and color != GREEN_HIGHLIGHT:
-                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
                     add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Lowercase narrative citations: stiles (2009) ---
@@ -883,7 +887,7 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
             if add_comments and color != GREEN_HIGHLIGHT:
-                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup)
                 add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
     return matched, fuzzy_matched, unmatched, unmatched_list, fuzzy_list
@@ -952,6 +956,40 @@ def highlight_span_in_paragraph(para, char_start, char_end, color_index):
         pos += run_len
 
 
+def build_fuzzy_body_comment(surname, year, matched_key, ref_fuzzy_lookup):
+    """Build specific comment for a fuzzy year match in body citation."""
+    base = strip_year_suffix(year)
+    candidates = ref_fuzzy_lookup.get((surname, base), [])
+    ref_years = sorted(set(ry for _, ry in candidates if ry != year))
+    if ref_years:
+        return f"Cited as {year} \u2192 reference list has {', '.join(ref_years)}"
+    elif matched_key:
+        return f"Cited as {year} \u2192 reference list has {matched_key[1]}"
+    return "Fuzzy year match"
+
+
+def build_block_fuzzy_comment(block_citations, ref_set, ref_fuzzy_lookup):
+    """Build specific comment for fuzzy matches in a multi-citation block."""
+    parts = []
+    for s, y in block_citations:
+        mt, mk = fuzzy_match_citation(s, y, ref_set, ref_fuzzy_lookup)
+        if mt == 'fuzzy':
+            parts.append(build_fuzzy_body_comment(s, y, mk, ref_fuzzy_lookup))
+    return "; ".join(parts) if parts else "Fuzzy year match"
+
+
+def build_fuzzy_ref_comment(surname, year, matched_key, citation_fuzzy_lookup):
+    """Build specific comment for a fuzzy year match in reference."""
+    base = strip_year_suffix(year)
+    candidates = citation_fuzzy_lookup.get((surname, base), [])
+    cite_years = sorted(set(cy for _, cy in candidates if cy != year))
+    if cite_years:
+        return f"Listed as {year} \u2192 cited in text as {', '.join(cite_years)}"
+    elif matched_key:
+        return f"Listed as {year} \u2192 cited in text as {matched_key[1]}"
+    return "Fuzzy match"
+
+
 def add_comment_to_span(doc, para, char_start, char_end, comment_text, author="ref-check"):
     """Add a Word bubble comment anchored to runs in [char_start, char_end).
     Requires python-docx >= 1.2.0. Silently skips if comment fails."""
@@ -1001,7 +1039,7 @@ def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup,
         if not surname:
             continue
 
-        match_type, _ = fuzzy_match_reference(surname, year, citation_set, citation_fuzzy_lookup)
+        match_type, matched_key = fuzzy_match_reference(surname, year, citation_set, citation_fuzzy_lookup)
 
         if match_type == 'exact':
             cited_count += 1
@@ -1024,7 +1062,10 @@ def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup,
 
         highlight_span_in_paragraph(para, 0, span_end, color)
         if add_comments and color != GREEN_HIGHLIGHT:
-            cmsg = "Reference not cited in body text" if color == RED_HIGHLIGHT else "Fuzzy match \u2014 verify correct year"
+            if color == RED_HIGHLIGHT:
+                cmsg = "Reference not cited in body text"
+            else:
+                cmsg = build_fuzzy_ref_comment(surname, year, matched_key, citation_fuzzy_lookup)
             add_comment_to_span(doc, para, 0, span_end, cmsg)
 
     return cited_count, fuzzy_count, uncited_count, uncited_list, fuzzy_list
