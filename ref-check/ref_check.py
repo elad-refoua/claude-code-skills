@@ -1,24 +1,21 @@
 """
 Reference Checker: Cross-reference in-text citations vs. reference list.
-Produces a color-highlighted Word document.
+Produces a color-highlighted Word document + JSON results for LLM verification.
 
-Usage: py ref_check.py <input.docx> [--no-verify]
-Output: <input>_REF_CHECK.docx in the same folder
+Usage: py ref_check.py <input.docx>
+Output: <input>_REF_CHECK.docx  (highlighted Word doc)
+        <input>_RESULTS.json   (structured data for Claude Code sub-agents)
 
 Colors:
   Body citations:  GREEN = exact match,  CYAN = fuzzy match,  YELLOW = missing from refs
   References:      GREEN = cited,  CYAN = fuzzy match,  RED = not cited
 
-Flags:
-  --no-verify   Skip Opus LLM verification (regex only, no API key needed)
-
-By default, Opus verification runs automatically if ANTHROPIC_API_KEY is set.
-Also saves learnings for future runs (noise words, cross-matches).
+This script does regex extraction + highlighting only.
+Claude Code orchestrates LLM verification via sub-agents (Sonnet + Opus).
 """
 
 import re
 import sys
-import os
 import copy
 import json
 from pathlib import Path
@@ -961,129 +958,7 @@ def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup)
 
 
 # ---------------------------------------------------------------------------
-# Opus LLM Verification
-# ---------------------------------------------------------------------------
-
-def verify_with_opus(body_text, ref_text, unmatched_citations, uncited_refs,
-                     matched_citations, fuzzy_citations):
-    """
-    Use Claude Opus to do a comprehensive verification pass.
-    Opus reads the FULL text and reference list, then:
-    1. Identifies citations the regex missed entirely
-    2. Removes false positives
-    3. Matches yellow citations to red references
-    4. Confirms red references as truly safe to delete
-    Returns dict with results.
-    """
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
-    if not api_key:
-        print("\n[VERIFY] No ANTHROPIC_API_KEY found. Skipping verification.")
-        print("         Set ANTHROPIC_API_KEY environment variable to enable.")
-        return None
-
-    try:
-        from anthropic import Anthropic
-    except ImportError:
-        print("\n[VERIFY] anthropic package not installed. Run: py -m pip install anthropic")
-        return None
-
-    client = Anthropic(api_key=api_key)
-
-    # Build lists
-    yellow_str = '\n'.join(f"  - {c}" for c in sorted(set(unmatched_citations))) if unmatched_citations else '  (none)'
-    red_str = '\n'.join(f"  - {r}" for r in sorted(set(uncited_refs))) if uncited_refs else '  (none)'
-    green_str = '\n'.join(f"  - {c}" for c in sorted(set(matched_citations)))
-    cyan_str = '\n'.join(f"  - {c}" for c in sorted(set(fuzzy_citations))) if fuzzy_citations else '  (none)'
-
-    prompt = f"""You are an expert APA citation checker. A regex tool cross-referenced citations vs. references in an academic paper. I need you to do a THOROUGH verification pass.
-
-=== FULL BODY TEXT ===
-{body_text}
-
-=== FULL REFERENCE LIST ===
-{ref_text}
-
-=== REGEX RESULTS ===
-
-MATCHED (GREEN - regex found these in both text and refs):
-{green_str}
-
-FUZZY MATCHES (CYAN - matched by base year, e.g., 1912a -> 1912):
-{cyan_str}
-
-UNMATCHED CITATIONS (YELLOW - found in text, NOT in references):
-{yellow_str}
-
-UNCITED REFERENCES (RED - in reference list, NOT found in text):
-{red_str}
-
-=== YOUR TASKS ===
-
-Read the full text carefully and answer:
-
-1. **MISSED CITATIONS**: Are there any citations in the text that the regex missed entirely?
-   Look for unusual formats: citations within footnotes, citations with first names only,
-   citations embedded in complex sentences, citations with "as cited in", slash years (1924/1986), etc.
-
-2. **FALSE POSITIVES**: Among the YELLOW items, are any NOT real citations?
-   (e.g., a noise word that looks like an author name)
-
-3. **CROSS-MATCHES**: Can any YELLOW citation be matched to a RED reference?
-   Consider: year typos, edition differences (2003 vs 2006 for same book),
-   spelling variants, same work with different year.
-
-4. **RED VERIFICATION (CRITICAL)**: For EACH red reference, search the full text very carefully.
-   Is it cited ANYWHERE in ANY form? This is the most important task - a red reference
-   marked as "safe to delete" must truly not appear in the text.
-
-5. **OTHER ISSUES**: Duplicate references, formatting problems, year inconsistencies.
-
-Return ONLY valid JSON (no markdown code fences, no explanation text):
-{{
-  "missed_citations": [
-    {{"citation": "Author (Year)", "location": "brief context from text", "reference_exists": true/false}}
-  ],
-  "false_positives": ["citation1", "citation2"],
-  "cross_matches": [
-    {{"citation": "Author (Year)", "reference": "Author (Year)", "reason": "explanation"}}
-  ],
-  "confirmed_uncited_refs": ["ref1", "ref2"],
-  "possibly_cited_refs": [
-    {{"reference": "Author (Year)", "evidence": "how/where it might be cited"}}
-  ],
-  "other_issues": ["issue1", "issue2"]
-}}"""
-
-    print("\n[VERIFY] Calling Claude Opus for comprehensive verification...")
-    print("         (This may take 30-60 seconds)")
-
-    try:
-        response = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}]
-        )
-
-        result_text = response.content[0].text.strip()
-        # Parse JSON from response - try to extract from markdown if needed
-        json_match = re.search(r'\{[\s\S]*\}', result_text)
-        if json_match:
-            result = json.loads(json_match.group())
-        else:
-            result = json.loads(result_text)
-
-        # Print token usage
-        usage = response.usage
-        print(f"[VERIFY] Opus verification complete. (Tokens: {usage.input_tokens} in, {usage.output_tokens} out)")
-        return result
-
-    except Exception as e:
-        print(f"\n[VERIFY] Opus verification failed: {e}")
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Self-Learning Mechanism
+# Self-Learning Mechanism (file-based, no API)
 # ---------------------------------------------------------------------------
 
 LEARNED_PATTERNS_FILE = Path(__file__).parent / "learned_patterns.json"
@@ -1162,73 +1037,6 @@ def apply_learned_cross_matches(learned, unmatched_citations, uncited_refs):
     return auto_matches
 
 
-def learn_from_opus(opus_result, paper_name):
-    """
-    Extract learnings from Opus verification results and save them.
-    Conservative approach - only learns:
-    1. Noise words from false positives (safe to generalize)
-    2. Specific cross-matches (only fire when both parties present)
-    """
-    if not opus_result:
-        return
-
-    learned = load_learned_patterns()
-    changes = 0
-
-    # 1. Learn noise words from false positives
-    existing_noise = set(w.lower() for w in learned['noise_words'])
-    for fp in opus_result.get('false_positives', []):
-        # Extract the word from "word (year)" format
-        m = re.match(r'(\w[\w-]*)', str(fp))
-        if m:
-            word = m.group(1).lower()
-            if word not in existing_noise and word not in NOISE_WORDS:
-                learned['noise_words'].append(word)
-                existing_noise.add(word)
-                changes += 1
-
-    # 2. Learn cross-matches (citation <-> reference)
-    existing_cm = set()
-    for cm in learned['cross_matches']:
-        existing_cm.add((cm.get('author', '').lower(), cm.get('cite_year', ''), cm.get('ref_year', '')))
-
-    for cm in opus_result.get('cross_matches', []):
-        cite_str = cm.get('citation', '')
-        ref_str = cm.get('reference', '')
-        reason = cm.get('reason', '')
-
-        cite_m = re.match(r'(\w[\w-]*)\s*\((\d{4}[a-z]?)\)', cite_str)
-        ref_m = re.match(r'(\w[\w-]*)\s*\((\d{4}[a-z]?)\)', ref_str)
-
-        if cite_m and ref_m:
-            author = cite_m.group(1).lower()
-            cite_year = cite_m.group(2)
-            ref_year = ref_m.group(2)
-
-            key = (author, cite_year, ref_year)
-            if key not in existing_cm:
-                learned['cross_matches'].append({
-                    "author": cite_m.group(1),
-                    "cite_year": cite_year,
-                    "ref_year": ref_year,
-                    "reason": reason,
-                    "source_paper": paper_name,
-                    "date": __import__('datetime').date.today().isoformat()
-                })
-                existing_cm.add(key)
-                changes += 1
-
-    if changes > 0:
-        save_learned_patterns(learned)
-        print(f"\n[LEARN] Saved {changes} new pattern(s) to {LEARNED_PATTERNS_FILE.name}")
-        if learned['noise_words']:
-            print(f"        Noise words: {', '.join(learned['noise_words'])}")
-        if learned['cross_matches']:
-            print(f"        Cross-matches: {len(learned['cross_matches'])} total")
-    else:
-        print("\n[LEARN] No new patterns to learn from this run.")
-
-
 # ---------------------------------------------------------------------------
 # Legend insertion
 # ---------------------------------------------------------------------------
@@ -1285,17 +1093,17 @@ def insert_legend(doc):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: py ref_check.py <input.docx> [--no-verify]")
+        print("Usage: py ref_check.py <input.docx>")
         sys.exit(1)
 
     input_path = Path(sys.argv[1])
-    use_verify = '--no-verify' not in sys.argv
 
     if not input_path.exists():
         print(f"Error: File not found: {input_path}")
         sys.exit(1)
 
     output_path = input_path.parent / f"{input_path.stem}_REF_CHECK{input_path.suffix}"
+    json_path = input_path.parent / f"{input_path.stem}_RESULTS.json"
 
     # Load learned patterns (noise words, cross-matches from prior runs)
     learned = load_learned_patterns()
@@ -1312,14 +1120,15 @@ def main():
     ref_para_idx = find_references_heading_index(doc)
     print(f"References section starts at paragraph {ref_para_idx} of {len(doc.paragraphs)}")
 
-    # Build body text (before references)
+    # Build body text and reference text (before/after references heading)
     body_text = '\n\n'.join(p.text for p in doc.paragraphs[:ref_para_idx])
+    ref_text = '\n'.join(p.text.strip() for p in doc.paragraphs[ref_para_idx+1:] if p.text.strip())
 
     # Extract citation keys and reference keys
     citation_set = extract_citations_from_text(body_text)
     ref_set = extract_references_from_doc(doc, ref_para_idx)
 
-    print(f"Found {len(citation_set)} unique in-text citations")
+    print(f"Found {len(citation_set)} unique in-text citations (regex)")
     print(f"Found {len(ref_set)} unique references")
 
     # Build fuzzy lookup tables
@@ -1355,37 +1164,43 @@ def main():
     # Insert legend at top
     insert_legend(doc)
 
-    # Opus verification (if requested)
-    opus_result = None
-    if use_verify:
-        matched_citations = []
-        for s, y in citation_set:
-            mt, _ = fuzzy_match_citation(s, y, ref_set, ref_fuzzy_lookup)
-            if mt == 'exact':
-                matched_citations.append(f"{s} ({y})")
+    # Build matched citations list for JSON output
+    matched_citations = []
+    for s, y in citation_set:
+        mt, _ = fuzzy_match_citation(s, y, ref_set, ref_fuzzy_lookup)
+        if mt == 'exact':
+            matched_citations.append(f"{s} ({y})")
 
-        # Build reference text for Opus
-        ref_text = '\n'.join(
-            p.text.strip() for p in doc.paragraphs[ref_para_idx+1:]
-            if p.text.strip()
-        )
-
-        opus_result = verify_with_opus(
-            body_text,
-            ref_text,
-            unmatched_list,
-            uncited_list,
-            matched_citations,
-            fuzzy_cite_list + fuzzy_ref_list
-        )
-
-        # Learn from Opus findings for future runs
-        if opus_result:
-            learn_from_opus(opus_result, input_path.stem)
-
-    # Save output
+    # Save highlighted Word doc
     doc.save(str(output_path))
     print(f"\nSaved: {output_path}")
+
+    # Save JSON results for Claude Code sub-agents
+    results_json = {
+        "paper": input_path.stem,
+        "body_text": body_text,
+        "ref_text": ref_text,
+        "stats": {
+            "regex_citations": len(citation_set),
+            "references": len(ref_set),
+            "body_matched": body_matched,
+            "body_fuzzy": body_fuzzy,
+            "body_unmatched": body_unmatched,
+            "ref_cited": ref_cited,
+            "ref_fuzzy": ref_fuzzy,
+            "ref_uncited": ref_uncited,
+        },
+        "matched_citations": sorted(set(matched_citations)),
+        "fuzzy_matches": sorted(set(fuzzy_cite_list + fuzzy_ref_list)),
+        "unmatched_citations": sorted(set(unmatched_list)),
+        "uncited_references": sorted(set(uncited_list)),
+        "citation_set": [f"{s} ({y})" for s, y in sorted(citation_set)],
+        "ref_set": [f"{s} ({y})" for s, y in sorted(ref_set)],
+    }
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(results_json, f, indent=2, ensure_ascii=False)
+    print(f"Saved: {json_path}")
 
     # Print summary
     print("\n" + "=" * 60)
@@ -1419,63 +1234,8 @@ def main():
         for item in sorted(set(uncited_list)):
             print(f"    - {item}")
 
-    # Opus verification results
-    if opus_result:
-        print("\n" + "=" * 60)
-        print("OPUS VERIFICATION RESULTS")
-        print("=" * 60)
-
-        missed = opus_result.get('missed_citations', [])
-        if missed:
-            print(f"\n  Citations Opus found that regex missed: {len(missed)}")
-            for mc in missed:
-                cite = mc.get('citation', '?') if isinstance(mc, dict) else mc
-                loc = mc.get('location', '') if isinstance(mc, dict) else ''
-                has_ref = mc.get('reference_exists', '?') if isinstance(mc, dict) else '?'
-                print(f"    + {cite} (ref exists: {has_ref}) {loc[:60]}")
-
-        fps = opus_result.get('false_positives', [])
-        if fps:
-            print(f"\n  False positives (not real citations): {len(fps)}")
-            for fp in fps:
-                print(f"    x {fp}")
-
-        xm = opus_result.get('cross_matches', [])
-        if xm:
-            print(f"\n  Cross-matches (yellow citation <-> red reference): {len(xm)}")
-            for cm in xm:
-                cite = cm.get('citation', '?') if isinstance(cm, dict) else cm
-                ref = cm.get('reference', '?') if isinstance(cm, dict) else ''
-                reason = cm.get('reason', '') if isinstance(cm, dict) else ''
-                print(f"    = {cite} <-> {ref} ({reason})")
-
-        possibly = opus_result.get('possibly_cited_refs', [])
-        if possibly:
-            print(f"\n  References Opus thinks ARE cited (regex missed): {len(possibly)}")
-            for pc in possibly:
-                ref = pc.get('reference', '?') if isinstance(pc, dict) else pc
-                evidence = pc.get('evidence', '') if isinstance(pc, dict) else ''
-                print(f"    ? {ref}: {evidence[:80]}")
-
-        confirmed_uncited = opus_result.get('confirmed_uncited_refs', [])
-        if confirmed_uncited:
-            print(f"\n  Confirmed SAFE TO REMOVE (truly uncited): {len(confirmed_uncited)}")
-            for r in confirmed_uncited:
-                print(f"    x {r}")
-
-        other = opus_result.get('other_issues', [])
-        if other:
-            print(f"\n  Other issues: {len(other)}")
-            for oi in other:
-                print(f"    ! {oi}")
-
-    elif use_verify:
-        print("\n  [!] Opus verification was requested but could not complete.")
-        print("      Red-marked references should be reviewed manually.")
-    else:
-        print("\n  [TIP] Set ANTHROPIC_API_KEY for automatic Opus verification.")
-        print("        This ensures red-marked references are safe to delete.")
-
+    print(f"\n  JSON results saved for Claude Code sub-agent verification.")
+    print(f"  Sub-agents will independently verify unmatched items.")
     print("\n" + "=" * 60)
 
 

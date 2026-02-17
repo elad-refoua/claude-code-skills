@@ -15,12 +15,23 @@ Scans your paper and highlights citations and references:
 | References | **Cyan** | Fuzzy match to a citation |
 | References | **Red** | Reference NOT cited in text |
 
+## Architecture
+
+```
+Python (regex + highlighting) -> JSON output -> Sonnet sub-agent (independent extraction) -> Opus sub-agent (verification)
+```
+
+1. **Python script**: Regex extraction, fuzzy matching, color-coded highlighting. No API keys needed.
+2. **Sonnet sub-agent**: Claude Code spawns a Sonnet agent that independently extracts all citations (catches what regex misses).
+3. **Opus sub-agent**: Claude Code spawns an Opus agent to verify remaining unmatched items, confirming red references are truly uncited.
+
 ## Requirements
 
 ```bash
 pip install python-docx
-pip install anthropic  # Optional: for --verify mode
 ```
+
+No API keys needed in the script. Claude Code handles LLM verification via sub-agents.
 
 ## Usage
 
@@ -30,6 +41,11 @@ In Claude Code, say:
 - "verify references"
 
 Or provide the `.docx` path directly.
+
+## Output
+
+- `<filename>_REF_CHECK.docx` - Color-coded Word document with legend
+- `<filename>_RESULTS.json` - Structured data for Claude Code sub-agents
 
 ## Citation Patterns Supported
 
@@ -43,11 +59,8 @@ Or provide the `.docx` path directly.
 - Hyphenated names: `Kabat-Zinn (1990)`
 - Year suffixes: `Freud (1912a)` fuzzy-matches `Freud (1912)`
 
-## Optional: LLM Verification
+## Self-Learning System
 
-Set `ANTHROPIC_API_KEY` to enable automatic Opus verification, which:
-- Catches citations that regex missed
-- Identifies false positives (noise words parsed as authors)
-- Makes red-marked references safe to delete with high confidence
-
-The skill also has a self-learning system that remembers patterns across papers.
+The skill remembers patterns across papers via `learned_patterns.json`:
+- **Noise words**: False positives identified by sub-agents are filtered in future runs
+- **Cross-matches**: Known citation-reference pairs with different years are auto-resolved

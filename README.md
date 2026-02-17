@@ -6,8 +6,12 @@ Shareable skills for [Claude Code](https://docs.anthropic.com/en/docs/claude-cod
 
 | Skill | Description |
 |-------|-------------|
-| **[ref-check](ref-check/)** | Cross-reference in-text citations against the reference list in academic papers (.docx). Produces a color-coded Word document (green=matched, cyan=fuzzy, yellow=missing from refs, red=uncited ref). Optional LLM verification with Opus. |
-| **[ref-context](ref-context/)** | Verify that citations contextually match the sentences where they appear. Uses web search + Sonnet sub-agent to check if each citation is relevant to its claim. |
+| **[ref-check](ref-check/)** | Cross-reference in-text citations against the reference list in academic papers (.docx). Produces a color-coded Word document (green=matched, cyan=fuzzy, yellow=missing from refs, red=uncited ref). Uses Claude Code sub-agents (Sonnet + Opus) for LLM verification. |
+| **[ref-context](ref-context/)** | Verify that citations contextually match the sentences where they appear. Uses web search + Sonnet/Opus sub-agents to check if each citation is relevant to its claim. |
+
+## Architecture
+
+These skills demonstrate the **hybrid Python + sub-agent** pattern: Python scripts handle data extraction and document processing, while Claude Code orchestrates LLM verification via sub-agents (Sonnet for extraction, Opus for verification). No API keys are needed in the scripts themselves.
 
 ## Installation
 
@@ -43,7 +47,6 @@ Each skill lists its own dependencies. Common ones:
 
 ```bash
 pip install python-docx    # Required for ref-check and ref-context
-pip install anthropic      # Optional: for ref-check --verify mode (Opus verification)
 ```
 
 ## Usage
@@ -57,7 +60,7 @@ Or provide a `.docx` file and ask Claude to check it.
 
 ## How Skills Work
 
-Skills are markdown files (`SKILL.md`) that give Claude Code specialized instructions for domain-specific tasks. Some skills include Python scripts for heavy processing. Claude Code automatically discovers skills in `~/.claude/skills/`.
+Skills are markdown files (`SKILL.md`) that give Claude Code specialized instructions for domain-specific tasks. Some skills include Python scripts for heavy processing, with Claude Code sub-agents handling LLM verification. Claude Code automatically discovers skills in `~/.claude/skills/`.
 
 Learn more: [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code)
 
