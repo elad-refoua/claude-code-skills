@@ -35,6 +35,23 @@ Python (regex + highlighting) → JSON output → Sonnet sub-agent (independent 
 | References | **Cyan highlight** | Reference fuzzy-matches a citation |
 | References | **Red highlight** | Reference NOT cited in text |
 
+## Table Support
+
+The script extracts text from **both paragraphs and table cells** in the body of the document. This ensures citations inside Word tables are found and highlighted correctly.
+
+## Comment Bubbles
+
+When `--comments` is passed, the script adds Word bubble comment annotations to non-green items:
+
+| Color | Comment |
+|-------|---------|
+| Yellow (body) | "Citation not found in reference list" |
+| Cyan (body) | "Fuzzy year match — verify correct year" |
+| Red (refs) | "Reference not cited in body text" |
+| Cyan (refs) | "Fuzzy match — verify correct year" |
+
+After Opus verification, additional comments can be added via `--add-comments` (see Step 8).
+
 ## How to Run
 
 ### Step 1: Get the file path
@@ -43,14 +60,16 @@ Ask the user for the .docx file path if not provided.
 ### Step 2: Run the Python script
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-check/ref_check.py" "<INPUT_FILE_PATH>"
+py "C:/Users/user/.claude/skills/ref-check/ref_check.py" "<INPUT_FILE_PATH>" --comments
 ```
 
-Requires: `python-docx` (`py -m pip install python-docx`)
+Requires: `python-docx >= 1.1.2` (`py -m pip install python-docx`)
+
+The `--comments` flag adds bubble comment annotations to the output document. Omit it for highlighting-only output.
 
 This outputs:
-- `<filename>_REF_CHECK.docx` — color-coded Word document
-- `<filename>_RESULTS.json` — structured data for sub-agents (body text, ref text, matched/unmatched lists)
+- `<filename>_REF_CHECK.docx` — color-coded Word document (with bubble comments if `--comments`)
+- `<filename>_RESULTS.json` — structured data for sub-agents (body text including tables, ref text, matched/unmatched lists)
 
 ### Step 3: Read the JSON output
 
@@ -176,12 +195,34 @@ Show the user:
 - **Opus verification**: missed citations, false positives, cross-matches, confirmed uncited
 - Path to output files
 
+### Step 8: Add Opus findings as comments (optional)
+
+After Opus returns its JSON results, inject its findings as bubble comments into the highlighted document:
+
+```bash
+py "C:/Users/user/.claude/skills/ref-check/ref_check.py" --add-comments "<filename>_REF_CHECK.docx" "<findings.json>"
+```
+
+The findings JSON should have this structure (matching the Opus output from Step 6):
+```json
+{
+  "cross_matches": [{"citation": "Author (Year)", "reference": "Author (Year)", "reason": "..."}],
+  "false_positives": ["citation1"],
+  "possibly_cited_refs": [{"reference": "Author (Year)", "evidence": "..."}],
+  "other_issues": ["issue1"]
+}
+```
+
+This adds comments authored "ref-check (Opus)" to the matching text spans in the document. The document is saved in-place.
+
 ## Important Notes
 - The Python script does regex + highlighting only, NO API calls needed
 - Sub-agents (Sonnet + Opus) are spawned by Claude Code via the Task tool
 - The original file is NEVER modified
 - Output: `_REF_CHECK.docx` (highlighted) + `_RESULTS.json` (data for sub-agents)
-- Install: `py -m pip install python-docx`
+- Install: `py -m pip install python-docx` (requires >= 1.1.2 for comment support)
+- **Tables**: Citations inside Word tables are extracted and highlighted automatically
+- **Comments**: Use `--comments` flag to add bubble comment annotations explaining each issue
 
 ## Self-Learning System
 

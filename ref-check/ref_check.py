@@ -452,6 +452,35 @@ def extract_references_from_doc(doc, ref_para_idx):
 # Document-level processing: find & highlight citation runs
 # ---------------------------------------------------------------------------
 
+def get_body_paragraphs(doc, ref_para_idx):
+    """
+    All paragraphs before References heading, including inside tables.
+    Uses XML element identity as stop sentinel to avoid index mismatch.
+    """
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    stop_elem = doc.paragraphs[ref_para_idx]._element if ref_para_idx < len(doc.paragraphs) else None
+
+    result = []
+    for child in doc.element.body.iterchildren():
+        if child is stop_elem:
+            break
+        tag = child.tag.split('}')[-1]
+        if tag == 'p':
+            result.append(Paragraph(child, doc))
+        elif tag == 'tbl':
+            tbl = Table(child, doc)
+            seen = set()
+            for row in tbl.rows:
+                for cell in row.cells:
+                    cid = id(cell._tc)
+                    if cid not in seen:
+                        seen.add(cid)
+                        result.extend(cell.paragraphs)
+    return result
+
+
 def get_plain_text(doc):
     """Get all text from document paragraphs."""
     parts = []
@@ -480,9 +509,11 @@ def determine_highlight_color(surname, year, ref_set, ref_fuzzy_lookup):
         return YELLOW_HIGHLIGHT
 
 
-def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy_lookup):
+def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy_lookup,
+                             add_comments=False):
     """
-    Walk through body paragraphs, find citation spans, and highlight them.
+    Walk through body paragraphs (incl. tables), find citation spans, highlight them.
+    Optionally adds Word bubble comments for non-green items.
     Returns counts and lists.
     """
     matched = 0
@@ -491,8 +522,7 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
     unmatched_list = []
     fuzzy_list = []
 
-    for pi in range(ref_para_idx):
-        para = doc.paragraphs[pi]
+    for para in get_body_paragraphs(doc, ref_para_idx):
         full_text = normalize_for_highlight(para.text)
         if not full_text.strip():
             continue
@@ -529,6 +559,9 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
+            if add_comments and color != GREEN_HIGHLIGHT:
+                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- 4b. Multi-citation bracket block: [Author, Year; Author2, Year2] ---
         for m in re.finditer(r'\[([^\]]*\d{4}[^\]]*;[^\]]*)\]', full_text):
@@ -577,6 +610,9 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
+                if add_comments and color != GREEN_HIGHLIGHT:
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Parenthetical citations: (Author, Year; Author2, Year2) ---
         #     Supports author inheritance: (Gelso, 2009; 2014) → both are Gelso
@@ -631,6 +667,9 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
+                if add_comments and color != GREEN_HIGHLIGHT:
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Narrative citations: Author (Year) or Author et al. (Year) ---
         # Handles hyphenated names like Kabat-Zinn, optional first name,
@@ -676,6 +715,9 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
+            if add_comments and color != GREEN_HIGHLIGHT:
+                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Possessive citations: Author's ... (Year1, Year2; OtherAuthor, Year) ---
         # Negative lookahead prevents crossing another Author's boundary
@@ -737,6 +779,9 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
+                if add_comments and color != GREEN_HIGHLIGHT:
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- "Author and colleagues" pattern ---
         for m in re.finditer(
@@ -792,6 +837,9 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
                 highlight_span_in_paragraph(para, span_start, span_end, color)
                 highlighted_spans.append((span_start, span_end))
+                if add_comments and color != GREEN_HIGHLIGHT:
+                    cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                    add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
         # --- Lowercase narrative citations: stiles (2009) ---
         for m in re.finditer(
@@ -834,6 +882,9 @@ def highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy
 
             highlight_span_in_paragraph(para, span_start, span_end, color)
             highlighted_spans.append((span_start, span_end))
+            if add_comments and color != GREEN_HIGHLIGHT:
+                cmsg = "Citation not found in reference list" if color == YELLOW_HIGHLIGHT else "Fuzzy year match \u2014 verify correct year"
+                add_comment_to_span(doc, para, span_start, span_end, cmsg)
 
     return matched, fuzzy_matched, unmatched, unmatched_list, fuzzy_list
 
@@ -901,10 +952,29 @@ def highlight_span_in_paragraph(para, char_start, char_end, color_index):
         pos += run_len
 
 
-def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup):
+def add_comment_to_span(doc, para, char_start, char_end, comment_text, author="ref-check"):
+    """Add a Word bubble comment anchored to runs in [char_start, char_end).
+    Requires python-docx >= 1.2.0. Silently skips if comment fails."""
+    span_runs = []
+    pos = 0
+    for run in para.runs:
+        rlen = len(run.text)
+        if pos >= char_start and pos + rlen <= char_end and rlen > 0:
+            span_runs.append(run)
+        pos += rlen
+    if span_runs:
+        try:
+            doc.add_comment(runs=span_runs, text=comment_text, author=author)
+        except Exception:
+            pass
+
+
+def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup,
+                         add_comments=False):
     """
     Highlight reference paragraphs: green if cited, cyan if fuzzy, red if not.
     Only highlights the "Author, X. (Year)." portion, not the full line.
+    Optionally adds Word bubble comments for non-green items.
     """
     cited_count = 0
     fuzzy_count = 0
@@ -953,6 +1023,9 @@ def highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup)
             span_end = len(para.text)
 
         highlight_span_in_paragraph(para, 0, span_end, color)
+        if add_comments and color != GREEN_HIGHLIGHT:
+            cmsg = "Reference not cited in body text" if color == RED_HIGHLIGHT else "Fuzzy match \u2014 verify correct year"
+            add_comment_to_span(doc, para, 0, span_end, cmsg)
 
     return cited_count, fuzzy_count, uncited_count, uncited_list, fuzzy_list
 
@@ -1091,9 +1164,104 @@ def insert_legend(doc):
 # Main
 # ---------------------------------------------------------------------------
 
+def add_findings_comments(docx_path, findings_json_path):
+    """
+    Post-processing: add Word bubble comments from sub-agent findings
+    to an already-highlighted REF_CHECK docx.
+
+    Called by Claude Code after Opus verification:
+      py ref_check.py --add-comments <REF_CHECK.docx> <findings.json>
+
+    findings.json format:
+    {
+      "cross_matches": [{"citation": "...", "reference": "...", "reason": "..."}],
+      "false_positives": [{"text": "...", "reason": "..."}],
+      "additional": [{"text": "...", "note": "..."}]
+    }
+    """
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    findings_path = Path(findings_json_path)
+    if not findings_path.exists():
+        print(f"[COMMENTS] Findings file not found: {findings_path}")
+        return
+
+    with open(findings_path, 'r', encoding='utf-8') as f:
+        findings = json.load(f)
+
+    doc = Document(str(docx_path))
+
+    # Collect all paragraphs (body + table cells) for text search
+    all_paragraphs = []
+    for child in doc.element.body.iterchildren():
+        tag = child.tag.split('}')[-1]
+        if tag == 'p':
+            all_paragraphs.append(Paragraph(child, doc))
+        elif tag == 'tbl':
+            tbl = Table(child, doc)
+            for row in tbl.rows:
+                for cell in row.cells:
+                    all_paragraphs.extend(cell.paragraphs)
+
+    def find_and_comment(search_text, comment_text):
+        """Find first paragraph containing search_text, add comment to that run."""
+        for para in all_paragraphs:
+            idx = para.text.find(search_text)
+            if idx != -1:
+                pos = 0
+                for run in para.runs:
+                    rlen = len(run.text)
+                    if pos <= idx < pos + rlen:
+                        try:
+                            doc.add_comment(runs=[run], text=comment_text,
+                                            author='ref-check (Opus)')
+                        except Exception:
+                            pass
+                        return True
+                    pos += rlen
+        return False
+
+    added = 0
+    for cm in findings.get('cross_matches', []):
+        cite = cm.get('citation', '')
+        ref = cm.get('reference', '')
+        reason = cm.get('reason', '')
+        search = cite.split('(')[0].strip()
+        if find_and_comment(search, f"Possible match: {cite} \u2194 {ref} ({reason})"):
+            added += 1
+
+    for fp in findings.get('false_positives', []):
+        text = fp.get('text', '')
+        reason = fp.get('reason', 'Not a real citation')
+        search = text.split('(')[0].strip()
+        if find_and_comment(search, f"Not a real citation: {reason}"):
+            added += 1
+
+    for item in findings.get('additional', []):
+        text = item.get('text', '')
+        note = item.get('note', '')
+        if text and note:
+            search = text.split('(')[0].strip()
+            if find_and_comment(search, note):
+                added += 1
+
+    doc.save(str(docx_path))
+    print(f"[COMMENTS] Added {added} Opus findings comments to: {docx_path}")
+
+
 def main():
+    # Handle --add-comments sub-command
+    if '--add-comments' in sys.argv:
+        idx = sys.argv.index('--add-comments')
+        if idx + 2 < len(sys.argv):
+            add_findings_comments(sys.argv[idx + 1], sys.argv[idx + 2])
+        else:
+            print("Usage: py ref_check.py --add-comments <REF_CHECK.docx> <findings.json>")
+        sys.exit(0)
+
     if len(sys.argv) < 2:
-        print("Usage: py ref_check.py <input.docx>")
+        print("Usage: py ref_check.py <input.docx> [--comments]")
         sys.exit(1)
 
     input_path = Path(sys.argv[1])
@@ -1113,6 +1281,11 @@ def main():
         print(f"[LEARN] Loaded {learned_noise_count} noise words, {learned_cm_count} cross-matches from memory")
     apply_learned_noise_words(learned)
 
+    # Optional flags
+    add_comments = '--comments' in sys.argv
+    if add_comments:
+        print("[COMMENTS] Word bubble comments enabled")
+
     print(f"Reading: {input_path}")
     doc = Document(str(input_path))
 
@@ -1121,7 +1294,9 @@ def main():
     print(f"References section starts at paragraph {ref_para_idx} of {len(doc.paragraphs)}")
 
     # Build body text and reference text (before/after references heading)
-    body_text = '\n\n'.join(p.text for p in doc.paragraphs[:ref_para_idx])
+    # Includes text from tables (not just doc.paragraphs)
+    body_paragraphs = get_body_paragraphs(doc, ref_para_idx)
+    body_text = '\n\n'.join(p.text for p in body_paragraphs)
     ref_text = '\n'.join(p.text.strip() for p in doc.paragraphs[ref_para_idx+1:] if p.text.strip())
 
     # Extract citation keys and reference keys
@@ -1137,11 +1312,13 @@ def main():
 
     # Highlight body citations
     body_matched, body_fuzzy, body_unmatched, unmatched_list, fuzzy_cite_list = \
-        highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy_lookup)
+        highlight_body_citations(doc, ref_para_idx, citation_set, ref_set, ref_fuzzy_lookup,
+                                 add_comments=add_comments)
 
     # Highlight references
     ref_cited, ref_fuzzy, ref_uncited, uncited_list, fuzzy_ref_list = \
-        highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup)
+        highlight_references(doc, ref_para_idx, citation_set, citation_fuzzy_lookup,
+                             add_comments=add_comments)
 
     # Apply learned cross-matches (from prior Opus runs)
     auto_matches = apply_learned_cross_matches(learned, unmatched_list, uncited_list)
