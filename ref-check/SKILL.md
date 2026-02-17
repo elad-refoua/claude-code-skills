@@ -46,9 +46,9 @@ When `--comments` is passed, the script adds Word bubble comment annotations to 
 | Color | Comment |
 |-------|---------|
 | Yellow (body) | "Citation not found in reference list" |
-| Cyan (body) | Specific advice, e.g. "Cited as 1912 → reference list has 1912a, 1912b" |
+| Cyan (body) | "Cited as {year} → reference list has {year_variants}" |
 | Red (refs) | "Reference not cited in body text" |
-| Cyan (refs) | Specific advice, e.g. "Listed as 1912 → cited in text as 1912a, 1912b" |
+| Cyan (refs) | "Listed as {year} → cited in text as {year_variants}" |
 
 After Opus verification, additional comments can be added via `--add-comments` (see Step 8).
 
