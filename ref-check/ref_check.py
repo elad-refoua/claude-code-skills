@@ -1193,31 +1193,79 @@ def insert_legend(doc):
 
 
 # ---------------------------------------------------------------------------
+# Comment stripping (for unified comment system)
+# ---------------------------------------------------------------------------
+
+def strip_refcheck_comments(doc):
+    """Remove all comments authored by ref-check from the document.
+    Preserves comments from other authors (e.g., the paper's author).
+    Returns the number of comments removed."""
+    # Find the comments part
+    comments_part = None
+    for rel in doc.part.rels.values():
+        if rel.reltype == 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments':
+            comments_part = rel.target_part
+            break
+
+    if comments_part is None:
+        return 0
+
+    # Find IDs of ref-check comments and remove them from comments part
+    refcheck_ids = set()
+    comments_elem = comments_part._element
+    for comment in list(comments_elem.findall(qn('w:comment'))):
+        author = comment.get(qn('w:author'), '')
+        if 'ref-check' in author.lower():
+            comment_id = comment.get(qn('w:id'))
+            refcheck_ids.add(comment_id)
+            comments_elem.remove(comment)
+
+    if not refcheck_ids:
+        return 0
+
+    # Remove corresponding markers from body XML
+    to_remove = []
+    for elem in doc.element.body.iter():
+        local_tag = elem.tag.split('}')[-1]
+        if local_tag in ('commentRangeStart', 'commentRangeEnd', 'commentReference'):
+            if elem.get(qn('w:id')) in refcheck_ids:
+                to_remove.append(elem)
+
+    for elem in to_remove:
+        parent = elem.getparent()
+        if parent is not None:
+            parent.remove(elem)
+
+    return len(refcheck_ids)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def add_findings_comments(docx_path, findings_json_path):
     """
-    Post-processing: add Word bubble comments from sub-agent findings
-    to an already-highlighted REF_CHECK docx.
+    Post-processing: add unified Word bubble comments to an already-highlighted
+    REF_CHECK docx. Replaces all previous ref-check comments with merged ones.
 
     Called by Claude Code after Opus verification:
       py ref_check.py --add-comments <REF_CHECK.docx> <findings.json>
 
-    findings.json keys consumed by this function:
-    {
-      "cross_matches": [{"citation": "...", "reference": "...", "reason": "..."}],
-      "false_positives": [{"text": "...", "reason": "..."}],
-      "fuzzy_comments": [{"citation": "...", "comment": "..."}],
-      "possibly_cited_refs": [{"reference": "...", "evidence": "..."}],
-      "other_issues": ["issue text mentioning Author (Year)"]
-    }
+    This function:
+    1. Strips all existing ref-check comments (preserves author comments)
+    2. Loads _RESULTS.json for factual status (yellow/red items)
+    3. Builds ONE merged comment per citation/reference combining all info
+    4. Mirrors cross-reference comments on both body citation AND reference entry
 
-    Keys NOT consumed here (used by Claude Code for reporting only):
+    findings.json keys consumed:
+      cross_matches, false_positives, fuzzy_comments, possibly_cited_refs, other_issues
+
+    Keys for Claude Code reporting only:
       missed_citations, confirmed_uncited_refs
     """
     from docx.table import Table
     from docx.text.paragraph import Paragraph
+    from collections import defaultdict
 
     findings_path = Path(findings_json_path)
     if not findings_path.exists():
@@ -1229,30 +1277,143 @@ def add_findings_comments(docx_path, findings_json_path):
 
     doc = Document(str(docx_path))
 
-    # Collect all paragraphs (body + table cells) for text search
-    all_paragraphs = []
+    # Also load RESULTS JSON for factual status (yellow/red lists)
+    results_path = Path(str(docx_path).replace('_REF_CHECK.docx', '_RESULTS.json'))
+    results = None
+    if results_path.exists():
+        with open(results_path, 'r', encoding='utf-8') as f:
+            results = json.load(f)
+
+    # Step 1: Strip all existing ref-check comments
+    stripped = strip_refcheck_comments(doc)
+    if stripped:
+        print(f"[COMMENTS] Stripped {stripped} previous ref-check comments")
+
+    # Step 2: Split paragraphs into body vs reference sections
+    ref_para_idx = find_references_heading_index(doc)
+    body_paras = []
+    ref_paras = []
+    para_count = 0
     for child in doc.element.body.iterchildren():
         tag = child.tag.split('}')[-1]
         if tag == 'p':
-            all_paragraphs.append(Paragraph(child, doc))
+            target = body_paras if para_count < ref_para_idx else ref_paras
+            target.append(Paragraph(child, doc))
+            para_count += 1
         elif tag == 'tbl':
             tbl = Table(child, doc)
+            target = body_paras if para_count < ref_para_idx else ref_paras
             for row in tbl.rows:
                 for cell in row.cells:
-                    all_paragraphs.extend(cell.paragraphs)
+                    target.extend(cell.paragraphs)
 
-    def find_and_comment(search_text, comment_text):
-        """Find first paragraph containing search_text, add comment to that run."""
-        for para in all_paragraphs:
-            idx = para.text.find(search_text)
-            if idx != -1:
+    # Helper: parse "Author (Year)" into (author, year) tuple
+    def parse_author_year(text):
+        m = re.match(r'(\w[\w-]*)\s*\((\d{4}[a-z]?)\)', text.strip())
+        return (m.group(1), m.group(2)) if m else (text.split('(')[0].strip(), '')
+
+    # Step 3: Build unified comment maps keyed by (author, year) tuples
+    # This prevents collisions when same author has multiple years
+    body_comments = defaultdict(list)   # (author, year) -> [comment_lines]
+    ref_comments = defaultdict(list)    # (author, year) -> [comment_lines]
+
+    # Factual status from RESULTS JSON
+    if results:
+        for cite in results.get('unmatched_citations', []):
+            key = parse_author_year(cite)
+            body_comments[key].append("Not found in reference list")
+        for ref_entry in results.get('uncited_references', []):
+            key = parse_author_year(ref_entry)
+            ref_comments[key].append("Not cited in body text")
+
+    # Cross-matches → mirror on BOTH body and reference
+    for cm in findings.get('cross_matches', []):
+        cite = cm.get('citation', '')
+        ref = cm.get('reference', '')
+        reason = cm.get('reason', '')
+        cite_key = parse_author_year(cite)
+        ref_key = parse_author_year(ref)
+        line = f"Cross-match: {cite} \u2194 {ref}\n{reason}"
+        body_comments[cite_key].append(line)
+        ref_comments[ref_key].append(line)
+
+    # False positives → body only
+    for fp in findings.get('false_positives', []):
+        text = fp.get('text', '')
+        reason = fp.get('reason', 'Not a real citation')
+        key = parse_author_year(text)
+        body_comments[key].append(f"Not a real citation: {reason}")
+
+    # Fuzzy comments → body
+    for fc in findings.get('fuzzy_comments', []):
+        cite = fc.get('citation', '')
+        comment = fc.get('comment', '')
+        if cite and comment:
+            key = parse_author_year(cite)
+            body_comments[key].append(comment)
+
+    # Possibly cited refs → reference section
+    for pr in findings.get('possibly_cited_refs', []):
+        ref = pr.get('reference', '')
+        evidence = pr.get('evidence', '')
+        if ref and evidence:
+            key = parse_author_year(ref)
+            ref_comments[key].append(f"Possibly cited: {evidence}")
+
+    # Other issues → route to body or ref based on content
+    for issue in findings.get('other_issues', []):
+        if not isinstance(issue, str) or not issue.strip():
+            continue
+        m = re.search(r'([A-Z][a-z]+(?:-[A-Z][a-z]+)?)\s*\((\d{4})', issue)
+        if not m:
+            continue
+        key = (m.group(1), m.group(2))
+        lower = issue.lower()
+        if 'reference' in lower or 'edition' in lower:
+            ref_comments[key].append(issue)
+        elif 'citation' in lower or 'body' in lower or 'stray' in lower:
+            body_comments[key].append(issue)
+        else:
+            body_comments[key].append(issue)
+            ref_comments[key].append(issue)
+
+    # Step 4: Add one merged comment per item
+    def add_body_comment(author, year, comment_text):
+        """Find body paragraph containing author + year (any format) and add comment.
+        Handles: Author (Year), Author [Year], Author's...(Year,...), et al., Year"""
+        for para in body_paras:
+            text = para.text
+            if author not in text:
+                continue
+            if year and year not in text:
+                continue
+            idx = text.find(author)
+            pos = 0
+            for run in para.runs:
+                rlen = len(run.text)
+                if pos <= idx < pos + rlen:
+                    try:
+                        doc.add_comment(runs=[run], text=comment_text,
+                                        author='ref-check')
+                    except Exception:
+                        pass
+                    return True
+                pos += rlen
+        return False
+
+    def add_ref_comment(author, year, comment_text):
+        """Find reference entry matching author + (year) and add comment."""
+        for para in ref_paras:
+            text = para.text
+            if author in text and (not year or f'({year})' in text):
+                idx = text.find(author)
                 pos = 0
                 for run in para.runs:
                     rlen = len(run.text)
                     if pos <= idx < pos + rlen:
                         try:
                             doc.add_comment(runs=[run], text=comment_text,
-                                            author='ref-check (Opus)')
+                                            author='ref-check')
                         except Exception:
                             pass
                         return True
@@ -1260,46 +1421,18 @@ def add_findings_comments(docx_path, findings_json_path):
         return False
 
     added = 0
-    for cm in findings.get('cross_matches', []):
-        cite = cm.get('citation', '')
-        ref = cm.get('reference', '')
-        reason = cm.get('reason', '')
-        search = cite.split('(')[0].strip()
-        if find_and_comment(search, f"Possible match: {cite} \u2194 {ref} ({reason})"):
+    for (author, year), lines in body_comments.items():
+        merged = '\n---\n'.join(lines)
+        if add_body_comment(author, year, merged):
             added += 1
 
-    for fp in findings.get('false_positives', []):
-        text = fp.get('text', '')
-        reason = fp.get('reason', 'Not a real citation')
-        search = text.split('(')[0].strip()
-        if find_and_comment(search, f"Not a real citation: {reason}"):
+    for (author, year), lines in ref_comments.items():
+        merged = '\n---\n'.join(lines)
+        if add_ref_comment(author, year, merged):
             added += 1
-
-    for fc in findings.get('fuzzy_comments', []):
-        cite = fc.get('citation', '')
-        comment = fc.get('comment', '')
-        if cite and comment:
-            search = cite.split('(')[0].strip()
-            if find_and_comment(search, comment):
-                added += 1
-
-    for pr in findings.get('possibly_cited_refs', []):
-        ref = pr.get('reference', '')
-        evidence = pr.get('evidence', '')
-        if ref and evidence:
-            search = ref.split('(')[0].strip()
-            if find_and_comment(search, f"Possibly cited: {evidence}"):
-                added += 1
-
-    for issue in findings.get('other_issues', []):
-        if isinstance(issue, str) and issue.strip():
-            m = re.search(r'([A-Z][a-z]+(?:-[A-Z][a-z]+)?)\s*\(', issue)
-            if m:
-                if find_and_comment(m.group(1), f"Issue: {issue}"):
-                    added += 1
 
     doc.save(str(docx_path))
-    print(f"[COMMENTS] Added {added} Opus findings comments to: {docx_path}")
+    print(f"[COMMENTS] Added {added} unified comments to: {docx_path}")
 
 
 def main():

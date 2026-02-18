@@ -41,26 +41,29 @@ The script extracts text from **both paragraphs and table cells** in the body of
 
 ## Comment Bubbles
 
-Comments come from two sources:
-
-### 1. Script comments (`--comments` flag)
-The Python script adds **factual** bubble comments for clear-cut issues:
+### Standalone mode (`--comments` flag only)
+When running without Opus, the script adds **factual** bubble comments:
 
 | Color | Comment |
 |-------|---------|
 | Yellow (body) | "Citation not found in reference list" |
 | Red (refs) | "Reference not cited in body text" |
 
-Cyan (fuzzy match) items do NOT get script-generated comments — they require contextual advice.
+### Full pipeline mode (`--add-comments`, Step 8)
+When the Opus sub-agent has verified results, `--add-comments` creates **unified comments** that:
+1. **Strip** all previous ref-check comments (preserves author's own comments)
+2. **Merge** factual status + Opus findings into ONE comment per citation/reference
+3. **Mirror** cross-references: a body citation comment also appears on its matching reference entry
 
-### 2. LLM comments (`--add-comments`, Step 8)
-After the Opus sub-agent verifies results, it generates **contextual advice** comments that are injected via `--add-comments`. These include:
-- Fuzzy match advice (e.g., which year suffix a/b/c to use)
-- Cross-match explanations (citation ↔ reference with different years)
-- False positive notes
-- Other issues found during verification
+Example unified comment on "Beck (1976)" in body:
+> Not found in reference list
+> ---
+> Cross-match: Beck (1976) ↔ Beck (1979)
+> Same book — originally 1976, reference list has 1979 reprint.
 
-This separation ensures factual comments are fast (regex) while advisory comments benefit from LLM judgment.
+The same cross-match info also appears on "Beck (1979)" in the reference list.
+
+Comment types merged per item: factual status, cross-match explanations, fuzzy match advice, false positive notes, possibly-cited evidence, and other issues.
 
 ## How to Run
 
@@ -219,13 +222,19 @@ Show the user:
 | `possibly_cited_refs` | Report + inject as comments via Step 8 |
 | `other_issues` | Report + inject as comments via Step 8 |
 
-### Step 8: Add Opus findings as comments (optional)
+### Step 8: Add unified comments (optional)
 
-After Opus returns its JSON results, inject its findings as bubble comments into the highlighted document:
+After Opus returns its JSON results, inject **unified** bubble comments into the highlighted document. This replaces all previous ref-check comments with merged ones that combine factual status + Opus findings:
 
 ```bash
 py "C:/Users/user/.claude/skills/ref-check/ref_check.py" --add-comments "<filename>_REF_CHECK.docx" "<findings.json>"
 ```
+
+The script automatically:
+1. **Strips** all existing ref-check comments (preserves author's own comments)
+2. **Reads** `_RESULTS.json` for factual status (which items are yellow/red)
+3. **Merges** all info into ONE comment per citation/reference
+4. **Mirrors** cross-reference comments on both body citation AND reference entry
 
 The findings JSON should have this structure (matching the Opus output from Step 6):
 ```json
@@ -238,7 +247,7 @@ The findings JSON should have this structure (matching the Opus output from Step
 }
 ```
 
-This adds comments authored "ref-check (Opus)" to the matching text spans in the document. The document is saved in-place.
+The document is saved in-place. Running `--add-comments` multiple times is safe — it strips and rebuilds each time.
 
 ### Step 9: Save learnings for future runs (optional)
 
