@@ -8,6 +8,7 @@ Shareable skills for [Claude Code](https://docs.anthropic.com/en/docs/claude-cod
 |-------|-------------|
 | **[ref-check](ref-check/)** | Cross-reference in-text citations against the reference list in academic papers (.docx). Produces a color-coded Word document (green=matched, cyan=fuzzy, yellow=missing from refs, red=uncited ref). Uses Claude Code sub-agents (Sonnet + Opus) for LLM verification. |
 | **[ref-context](ref-context/)** | Verify that citations contextually match the sentences where they appear. Uses web search + Sonnet/Opus sub-agents to check if each citation is relevant to its claim. |
+| **[ref-verify](ref-verify/)** | Verify every reference in a paper for factual accuracy (authors, year, title, journal, pages, DOI) via web search sub-agents. Also exports a Zotero-compatible RIS file. |
 
 ## Architecture
 
@@ -31,6 +32,7 @@ cp -r claude-code-skills/ref-check ~/.claude/skills/
 git clone https://github.com/elad-refoua/claude-code-skills.git
 cp -r claude-code-skills/ref-check ~/.claude/skills/
 cp -r claude-code-skills/ref-context ~/.claude/skills/
+cp -r claude-code-skills/ref-verify ~/.claude/skills/
 ```
 
 ### Windows (PowerShell)
@@ -39,6 +41,7 @@ cp -r claude-code-skills/ref-context ~/.claude/skills/
 git clone https://github.com/elad-refoua/claude-code-skills.git
 Copy-Item -Recurse claude-code-skills\ref-check $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse claude-code-skills\ref-context $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse claude-code-skills\ref-verify $env:USERPROFILE\.claude\skills\
 ```
 
 ## Dependencies
@@ -55,6 +58,7 @@ Once installed, skills activate automatically when you use trigger phrases in Cl
 
 - **ref-check**: "check references", "ref check", "verify references"
 - **ref-context**: "check citation context", "verify citation accuracy"
+- **ref-verify**: "verify references accuracy", "export to zotero", "בדוק הפניות"
 
 Or provide a `.docx` file and ask Claude to check it.
 
