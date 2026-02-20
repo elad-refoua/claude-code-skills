@@ -8,7 +8,7 @@ Shareable skills for [Claude Code](https://docs.anthropic.com/en/docs/claude-cod
 |-------|-------------|
 | **[ref-check](ref-check/)** | Cross-reference in-text citations against the reference list in academic papers (.docx). Produces a color-coded Word document (green=matched, cyan=fuzzy, yellow=missing from refs, red=uncited ref). Uses Claude Code sub-agents (Sonnet + Opus) for LLM verification. |
 | **[ref-context](ref-context/)** | Verify that citations contextually match the sentences where they appear. Uses web search + Sonnet/Opus sub-agents to check if each citation is relevant to its claim. |
-| **[ref-verify](ref-verify/)** | Verify every reference in a paper for factual accuracy (authors, year, title, journal, pages, DOI) via web search sub-agents. Also exports a Zotero-compatible RIS file. |
+| **[ref-verify](ref-verify/)** | Verify every reference in a paper for factual accuracy (authors, year, title, journal, pages, DOI) via **double-control** web search sub-agents. Produces a detailed Excel table + Zotero-compatible RIS file. |
 
 ## Architecture
 
@@ -49,7 +49,8 @@ Copy-Item -Recurse claude-code-skills\ref-verify $env:USERPROFILE\.claude\skills
 Each skill lists its own dependencies. Common ones:
 
 ```bash
-pip install python-docx    # Required for ref-check and ref-context
+pip install python-docx    # Required for ref-check, ref-context, ref-verify
+pip install openpyxl       # Required for ref-verify (Excel export)
 ```
 
 ## Usage

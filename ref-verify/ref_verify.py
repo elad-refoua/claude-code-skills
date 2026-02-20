@@ -2,14 +2,16 @@
 ref_verify.py - Extract references from a .docx academic paper for verification + Zotero export.
 
 Usage:
-    py ref_verify.py "paper.docx"                     # Extract refs → JSON + RIS
+    py ref_verify.py "paper.docx"                     # Extract refs → JSON + RIS + Excel
     py ref_verify.py "paper.docx" --batch-size 10      # Custom batch size
-    py ref_verify.py "paper.docx" --ris-only            # Only generate RIS (no JSON)
+    py ref_verify.py "paper.docx" --ris-only            # Only generate RIS (no JSON/Excel)
     py ref_verify.py --from-json "results.json"         # Generate RIS from existing JSON
+    py ref_verify.py --update-excel "paper_REFS.xlsx" "findings.json"  # Update Excel with verification results
 
 Output:
     paper_REFS_TO_VERIFY.json   - Batched refs for sub-agent verification
     paper_REFS.ris              - RIS file importable by Zotero/Mendeley/EndNote
+    paper_REFS.xlsx             - Detailed Excel table with all parsed fields + verification status
 """
 import json
 import re
@@ -23,6 +25,17 @@ except ImportError:
     import subprocess
     subprocess.check_call([sys.executable, "-m", "pip", "install", "python-docx", "--quiet"])
     from docx import Document
+
+try:
+    from openpyxl import load_workbook
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+except ImportError:
+    import subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl", "--quiet"])
+    from openpyxl import load_workbook
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -285,10 +298,152 @@ def export_ris(parsed_refs, output_path):
 
 
 # ---------------------------------------------------------------------------
+# Excel export (detailed reference table)
+# ---------------------------------------------------------------------------
+
+HEADER_FILL = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+CORRECT_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+ERROR_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+UNVERIFIABLE_FILL = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+PENDING_FILL = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+THIN_BORDER = Border(
+    left=Side(style="thin"), right=Side(style="thin"),
+    top=Side(style="thin"), bottom=Side(style="thin"),
+)
+
+EXCEL_COLUMNS = [
+    ("#", 5), ("Authors", 30), ("Year", 8), ("Title", 50), ("Type", 12),
+    ("Journal", 30), ("Volume", 8), ("Issue", 7), ("Pages", 12),
+    ("Publisher", 25), ("Editors", 25), ("Edition", 10), ("DOI", 35),
+    ("Full APA Text", 70), ("Agent 1 Status", 14), ("Agent 1 Issues", 45),
+    ("Agent 2 Status", 14), ("Agent 2 Issues", 45), ("Final Status", 14),
+]
+
+
+def export_excel(parsed_refs, output_path):
+    """Write all parsed references as a detailed .xlsx file with verification columns."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "References"
+
+    # Write header row
+    for col_idx, (name, width) in enumerate(EXCEL_COLUMNS, 1):
+        cell = ws.cell(row=1, column=col_idx, value=name)
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.alignment = Alignment(horizontal="center", wrap_text=True)
+        cell.border = THIN_BORDER
+        ws.column_dimensions[cell.column_letter].width = width
+
+    # Write reference rows
+    for i, ref in enumerate(parsed_refs, 1):
+        row = i + 1
+        values = [
+            i, ref["authors"], ref["year"], ref["title"], ref["type"],
+            ref["journal"], ref["volume"], ref["issue"], ref["pages"],
+            ref["publisher"], ref["editors"], ref["edition"], ref["doi"],
+            ref["full_text"], "", "", "", "", "",
+        ]
+        for col_idx, val in enumerate(values, 1):
+            cell = ws.cell(row=row, column=col_idx, value=val)
+            cell.border = THIN_BORDER
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+            # Pending fill for status columns
+            if col_idx in (15, 17, 19):
+                cell.fill = PENDING_FILL
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    # Auto-filter
+    ws.auto_filter.ref = f"A1:{ws.cell(1, len(EXCEL_COLUMNS)).column_letter}{len(parsed_refs) + 1}"
+
+    wb.save(output_path)
+    print(f"Excel saved: {output_path} ({len(parsed_refs)} references)")
+
+
+def update_excel_with_results(excel_path, findings_json_path, agent_num):
+    """Update Excel with verification results from a sub-agent findings JSON.
+
+    agent_num: 1 or 2 (for double control — two independent verification passes).
+    The findings JSON should have a list of objects with: ref_num, status, issues.
+    """
+    wb = load_workbook(excel_path)
+    ws = wb.active
+
+    with open(findings_json_path, encoding="utf-8") as f:
+        findings = json.load(f)
+
+    # Determine which columns to write (Agent 1 or Agent 2)
+    status_col = 15 if agent_num == 1 else 17  # "Agent 1 Status" or "Agent 2 Status"
+    issues_col = 16 if agent_num == 1 else 18  # "Agent 1 Issues" or "Agent 2 Issues"
+
+    status_fills = {
+        "CORRECT": CORRECT_FILL,
+        "ERROR": ERROR_FILL,
+        "UNVERIFIABLE": UNVERIFIABLE_FILL,
+    }
+
+    updated = 0
+    for entry in findings:
+        ref_num = entry.get("ref_num", 0)
+        status = entry.get("status", "").upper()
+        issues = entry.get("issues", "")
+        if ref_num < 1:
+            continue
+        row = ref_num + 1  # row 1 is header
+        ws.cell(row=row, column=status_col, value=status)
+        ws.cell(row=row, column=issues_col, value=issues)
+        fill = status_fills.get(status, PENDING_FILL)
+        ws.cell(row=row, column=status_col).fill = fill
+        ws.cell(row=row, column=issues_col).fill = fill
+        ws.cell(row=row, column=status_col).border = THIN_BORDER
+        ws.cell(row=row, column=issues_col).border = THIN_BORDER
+        updated += 1
+
+    # If both agents have results, compute Final Status
+    for row in range(2, ws.max_row + 1):
+        s1 = (ws.cell(row=row, column=15).value or "").upper()
+        s2 = (ws.cell(row=row, column=17).value or "").upper()
+        if s1 and s2:
+            if s1 == s2:
+                final = s1
+            elif "ERROR" in (s1, s2):
+                final = "ERROR"
+            elif "UNVERIFIABLE" in (s1, s2):
+                final = "REVIEW"
+            else:
+                final = "REVIEW"
+            ws.cell(row=row, column=19, value=final)
+            ws.cell(row=row, column=19).fill = status_fills.get(final, UNVERIFIABLE_FILL)
+            ws.cell(row=row, column=19).border = THIN_BORDER
+            ws.cell(row=row, column=19).font = Font(bold=True)
+
+    wb.save(excel_path)
+    print(f"Excel updated: {excel_path} (agent {agent_num}, {updated} refs updated)")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main():
+    # Handle --update-excel mode
+    if "--update-excel" in sys.argv:
+        idx = sys.argv.index("--update-excel")
+        if idx + 2 >= len(sys.argv):
+            print("Usage: py ref_verify.py --update-excel <paper_REFS.xlsx> <findings.json> [--agent 1|2]")
+            sys.exit(1)
+        excel_path = Path(sys.argv[idx + 1])
+        findings_path = Path(sys.argv[idx + 2])
+        agent_num = 1
+        if "--agent" in sys.argv:
+            a_idx = sys.argv.index("--agent")
+            if a_idx + 1 < len(sys.argv):
+                agent_num = int(sys.argv[a_idx + 1])
+        update_excel_with_results(str(excel_path), str(findings_path), agent_num)
+        return
+
     # Handle --from-json mode
     if "--from-json" in sys.argv:
         idx = sys.argv.index("--from-json")
@@ -344,6 +499,10 @@ def main():
     ris_path = docx_path.parent / f"{docx_path.stem}_REFS.ris"
     export_ris(parsed_refs, str(ris_path))
 
+    # Always generate Excel
+    xlsx_path = docx_path.parent / f"{docx_path.stem}_REFS.xlsx"
+    export_excel(parsed_refs, str(xlsx_path))
+
     if ris_only:
         return
 
@@ -375,10 +534,11 @@ def main():
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"\nJSON: {out_path.name}")
-    print(f"RIS:  {ris_path.name}")
+    print(f"\nJSON:  {out_path.name}")
+    print(f"RIS:   {ris_path.name}")
+    print(f"Excel: {xlsx_path.name}")
     print(f"Batches: {num_batches} (batch size {batch_size})")
-    print(f"\nReady for Claude Code sub-agent verification.")
+    print(f"\nReady for Claude Code sub-agent verification (double control).")
 
 
 if __name__ == "__main__":
