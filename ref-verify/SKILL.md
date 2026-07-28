@@ -29,7 +29,7 @@ Ask the user for the .docx file path if not provided. Look in the current workin
 ### Step 2: Run the extraction script
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-verify/ref_verify.py" "<DOCX_PATH>"
+py "~/.claude/skills/ref-verify/ref_verify.py" "<DOCX_PATH>"
 ```
 
 This produces THREE files:
@@ -100,7 +100,7 @@ As each sub-agent returns:
 3. Run the Excel updater:
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-verify/ref_verify.py" --update-excel "<paper>_REFS.xlsx" "<paper>_AGENT1_FINDINGS.json" --agent 1
+py "~/.claude/skills/ref-verify/ref_verify.py" --update-excel "<paper>_REFS.xlsx" "<paper>_AGENT1_FINDINGS.json" --agent 1
 ```
 
 This fills in the "Agent 1 Status" and "Agent 1 Issues" columns in the Excel.
@@ -143,7 +143,7 @@ Same concurrency rules as Round 1.
 2. Update Excel:
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-verify/ref_verify.py" --update-excel "<paper>_REFS.xlsx" "<paper>_AGENT2_FINDINGS.json" --agent 2
+py "~/.claude/skills/ref-verify/ref_verify.py" --update-excel "<paper>_REFS.xlsx" "<paper>_AGENT2_FINDINGS.json" --agent 2
 ```
 
 This fills "Agent 2 Status" / "Agent 2 Issues" columns AND computes the "Final Status":

@@ -73,7 +73,7 @@ Ask the user for the .docx file path if not provided.
 ### Step 2: Run the Python script
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-check/ref_check.py" "<INPUT_FILE_PATH>" --comments
+py "~/.claude/skills/ref-check/ref_check.py" "<INPUT_FILE_PATH>" --comments
 ```
 
 Requires: `python-docx >= 1.1.2` (`py -m pip install python-docx`)
@@ -227,7 +227,7 @@ Show the user:
 After Opus returns its JSON results, inject **unified** bubble comments into the highlighted document. This replaces all previous ref-check comments with merged ones that combine factual status + Opus findings:
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-check/ref_check.py" --add-comments "<filename>_REF_CHECK.docx" "<findings.json>"
+py "~/.claude/skills/ref-check/ref_check.py" --add-comments "<filename>_REF_CHECK.docx" "<findings.json>"
 ```
 
 The script automatically:
@@ -254,7 +254,7 @@ The document is saved in-place. Running `--add-comments` multiple times is safe 
 After Opus returns its findings, persist cross-matches and noise words so future runs auto-resolve them:
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-check/ref_check.py" --save-learnings "<findings.json>"
+py "~/.claude/skills/ref-check/ref_check.py" --save-learnings "<findings.json>"
 ```
 
 This extracts from the Opus findings JSON:

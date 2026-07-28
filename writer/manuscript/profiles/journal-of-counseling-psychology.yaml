@@ -1,0 +1,77 @@
+# Journal of Counseling Psychology -- APA Journal
+# IF ~4.5 | Published by APA | ISSN: 0022-0167 (print), 1939-2168 (online)
+
+name: "Journal of Counseling Psychology"
+abbreviation: "JCP"
+
+# Citation & References
+citation_style: "apa7"
+reference_format:
+  style: "apa7"
+  numbered: false
+  in_text: "author-year"
+
+# Word Limits (APA standard journal -- generous limits)
+word_limits:
+  abstract: 250
+  introduction: 3000
+  method: 2000
+  results: 3000
+  discussion: 3000
+  paper_total: 12000  # ~40 double-spaced pages including references
+
+# Section Structure
+section_headings:
+  intro: "Introduction"
+  method: "Method"
+  participants: "Participants"
+  measures: "Measures"
+  procedure: "Procedure"
+  analytic_strategy: "Analytic Strategy"
+  results: "Results"
+  discussion: "Discussion"
+  limitations: "Limitations and Future Directions"
+headings_style: "title case"
+
+# Abstract
+abstract_format: "unstructured"
+# Single flowing paragraph, no sub-sections. Up to 5 keywords.
+
+# Statistics Formatting
+stats_format:
+  p_value: "< .001 or = .XXX (no leading zero)"
+  confidence_interval: "95% CI [low, high]"
+  or_notation: "OR"
+  effect_size: "Cohen's d, R-squared, ICC"
+  decimal_places: 2
+  leading_zero: false
+
+# Tables & Figures
+tables:
+  max_count: null
+  caption_position: "above"
+  notes_position: "below"
+  style: "three-line (top, header-separator, bottom)"
+figures:
+  caption_position: "below"
+  format: "PNG 300 DPI minimum"
+
+# Tone & Style
+tone: "Scholarly, process-oriented, clinically grounded. Values large-N process research and multi-informant designs."
+voice: "First person plural (We) for own work; passive for general statements"
+constraints:
+  - "Use 'association' not 'relationship' for cross-sectional data"
+  - "Report effect sizes for all statistical tests"
+  - "Tag every results paragraph as confirmatory or exploratory"
+  - "Emphasize clinical implications for counseling practice and supervision"
+  - "Discuss multicultural considerations where relevant"
+
+# Special notes
+special_notes:
+  - "JCP values research relevant to counseling process and outcome"
+  - "Training clinic samples are well-suited for this journal"
+  - "Multi-informant designs and session-level data are viewed favorably"
+  - "Practical implications for supervision and training should be highlighted"
+
+# Keywords
+keywords: 5

@@ -1,0 +1,94 @@
+# JAMA Network Open
+# Medical/psychiatric journal -- AMA citation style, structured abstract
+
+name: "JAMA Network Open"
+abbreviation: "JAMA"
+
+# Citation & References
+citation_style: "ama"
+reference_format:
+  style: "ama"
+  numbered: true
+  in_text: "superscript"
+  max_references: 50
+
+# Word Limits
+word_limits:
+  abstract: 350
+  introduction: 1000
+  method: null  # No strict limit
+  results: null
+  discussion: null
+  paper_total: 4500  # Excluding abstract, methods, references
+
+# Section Structure
+section_headings:
+  intro: "Introduction"
+  method: "Methods"
+  participants: "Participants"
+  measures: "Measures"
+  procedure: "Statistical Analysis"
+  results: "Results"
+  discussion: "Discussion"
+  limitations: "Limitations"
+  conclusions: "Conclusions"
+headings_style: "title case"
+
+# Abstract -- STRUCTURED (JAMA signature)
+abstract_format: "structured"
+abstract_sections:
+  - heading: "Importance"
+    description: "Why the study matters to clinicians/patients"
+  - heading: "Objective"
+    description: "Specific aims/hypotheses"
+  - heading: "Design, Setting, and Participants"
+    description: "Study design, where conducted, who was included, dates"
+  - heading: "Main Outcomes and Measures"
+    description: "Primary and secondary outcomes"
+  - heading: "Results"
+    description: "Key findings with exact numbers"
+  - heading: "Conclusions and Relevance"
+    description: "Clinical implications, one sentence"
+
+# Statistics Formatting
+stats_format:
+  p_value: "P < .001 or P = .XX (capital P, 2 decimal places)"
+  confidence_interval: "95% CI, low-high (en-dash, no brackets)"
+  or_notation: "aOR for adjusted, OR for unadjusted"
+  effect_size: "Report when available; NNT preferred for clinical"
+  decimal_places: 2
+  leading_zero: false
+
+# Tables & Figures
+tables:
+  max_count: 5
+  caption_position: "above"
+  style: "Clean, no vertical lines"
+figures:
+  max_count: 5
+  caption_position: "below"
+  format: "TIFF 300 DPI or EPS"
+
+# Tone & Style
+tone: "Clinical, authoritative, concise"
+voice: "Third person preferred; first person acceptable for design decisions"
+constraints:
+  - "Avoid jargon -- write for clinicians, not just researchers"
+  - "Lead every results paragraph with clinical relevance"
+  - "Include absolute numbers alongside percentages"
+  - "Report Number Needed to Treat (NNT) when applicable"
+  - "Limitations must precede Conclusions"
+  - "No first person in abstract"
+  - "Spell out numbers less than 10 in narrative text"
+
+# Keywords
+keywords: null  # JAMA uses MeSH terms, not author-selected keywords
+mesh_terms: true
+
+# Special Notes
+special_notes: |
+  JAMA requires STROBE checklist for observational studies.
+  Data sharing statement required.
+  Conflict of interest disclosure mandatory.
+  Trial registration number if applicable.
+  Ethics committee approval statement required.

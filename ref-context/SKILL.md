@@ -33,7 +33,7 @@ Ask the user for the .docx file path if not provided.
 ### Step 2: Run the extraction script
 
 ```bash
-py "C:/Users/user/.claude/skills/ref-context/ref_context.py" "<INPUT_FILE_PATH>"
+py "~/.claude/skills/ref-context/ref_context.py" "<INPUT_FILE_PATH>"
 ```
 
 This outputs `<filename>_PAIRS.json` with all citation-sentence pairs and search queries.

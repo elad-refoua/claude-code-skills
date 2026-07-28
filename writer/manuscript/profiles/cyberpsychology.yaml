@@ -1,0 +1,81 @@
+# Cyberpsychology, Behavior, and Social Networking
+# Mary Ann Liebert publisher -- APA style with tech focus
+
+name: "Cyberpsychology, Behavior, and Social Networking"
+abbreviation: "Cyberpsychology"
+
+# Citation & References
+citation_style: "apa7"
+reference_format:
+  style: "apa7"
+  numbered: false
+  in_text: "author-year"
+  max_references: 60
+
+# Word Limits
+word_limits:
+  abstract: 250
+  introduction: 2500
+  method: 2000
+  results: 2500
+  discussion: 2500
+  paper_total: 8000  # Excluding references and tables
+
+# Section Structure
+section_headings:
+  intro: "Introduction"
+  method: "Methods"
+  participants: "Participants"
+  measures: "Measures"
+  procedure: "Procedure"
+  analytic_strategy: "Data Analysis"
+  results: "Results"
+  discussion: "Discussion"
+  limitations: "Limitations"
+  conclusions: "Conclusions"
+headings_style: "title case"
+
+# Abstract
+abstract_format: "unstructured"
+# Single paragraph, flowing prose
+
+# Statistics Formatting
+stats_format:
+  p_value: "p < .001 or p = .XXX (lowercase p)"
+  confidence_interval: "95% CI [low, high]"
+  or_notation: "OR"
+  effect_size: "Cohen's d, partial eta-squared"
+  decimal_places: 2
+  leading_zero: false
+
+# Tables & Figures
+tables:
+  max_count: 6
+  caption_position: "above"
+  style: "APA standard"
+figures:
+  max_count: 4
+  caption_position: "below"
+  format: "TIFF or EPS, 300 DPI"
+
+# Tone & Style
+tone: "Empirical, technology-aware, accessible"
+voice: "First person plural for own work"
+constraints:
+  - "Emphasize the technology-human interaction angle"
+  - "Connect findings to online/digital behavior implications"
+  - "Include practical implications for technology design or policy"
+  - "Define all technology-specific terms on first use"
+  - "Recent citations strongly preferred (last 5 years)"
+  - "Cross-cultural considerations valued"
+
+# Keywords
+keywords: 5
+
+# Special Notes
+special_notes: |
+  Journal values interdisciplinary framing (psych + tech + social).
+  Emphasize what's novel about the digital context.
+  Reviewers expect thorough operationalization of tech constructs.
+  Online data collection is standard -- no need to over-justify.
+  Open Science practices (pre-registration, open data) valued.
