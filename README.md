@@ -37,18 +37,19 @@ cp -r claude-code-skills/writer ~/.claude/agents/
 Then open the file you copied and replace any `<PLACEHOLDER>` it contains.
 
 
-## 🤖 Agents (6)
+## 🤖 Agents (7)
 
 | Agent | Quality | What it does |
 |---|---|---|
 | **[dashboard-expert](dashboard-expert/)** | ★★★☆☆ | Builds interactive **research data explorers** (R/Python→JSON→HTML) with a client-side stats engine (OLS, logistic, Sobel mediation, moderation). Use to turn analysis output into a shareable dashboard. |
 | **[privacy-compliance](privacy-compliance/)** | ★★★★☆ | Privacy Compliance Officer covering **HIPAA, GDPR, and Israeli Privacy Law** — assessments, DPIAs, code review, incident plans. Use when a system touches personal or health data. |
+| **[presentation-journey-architect](presentation-journey-architect/)** | ★★★★☆ | Turns a **slide deck into a verified online 3D journey** — coordinates the four `presentation-3d-*` skills (story → design → build → review), keeps every number traceable to its source, finishes in a real browser. Use to make an immersive, faithful presentation site. |
 | **[r-coder](r-coder/)** | ★★★★★ | Reviewable-R-code agent that enforces a 13-rule **R Style Constitution** (linear narrative scripts, config-as-data, semantic selection, per-step save + PASS/FAIL, checks-checklist, Results.md via glue()) plus a deterministic `r_lint.py` gate. *Scaffold — personal style examples removed.* Use for any R analysis/cleaning code a human will review. |
 | **[story-to-video](story-to-video/)** | ★★★★☆ | Turns a personal story or YouTube transcript into an **illustrated narrated video** with consistent watercolor characters (Hebrew/English). Use for testimony, memorial, or children's story videos. |
 | **[video-producer](video-producer/)** | ★★★★☆ | End-to-end **narrated video** pipeline: TTS (30-voice Hebrew/English), AI-illustrated frames, Ken Burns effects, ASS subtitles, ffmpeg assembly. Use for training/explainer/promo videos. |
 | **[writer](writer/)** | ★★★★★ | Publication-quality academic writing agent (APA 7th) with a THINK→WRITE→VERIFY pipeline, a 31-check anti-AI-detection system (grounded in Kobak et al. 2025), and modes for grants/comments/posts/opinion/revision. *Scaffold only — personal voice corpus removed.* Use for manuscripts, grants, or any publication-quality text. |
 
-## 🧩 Skills (44)
+## 🧩 Skills (48)
 
 | Skill | Quality | What it does |
 |---|---|---|
@@ -82,6 +83,10 @@ Then open the file you copied and replace any `<PLACEHOLDER>` it contains.
 | **[privacy-check](privacy-check/)** | ★★★☆☆ | Router that picks the right privacy framework for your project. Use when the jurisdiction is unclear. |
 | **[privacy-gdpr](privacy-gdpr/)** | ★★★★☆ | GDPR reference: principles, rights, breach timelines, DPIA. Use for EU data subjects. |
 | **[privacy-hipaa](privacy-hipaa/)** | ★★★★☆ | HIPAA checklist + GCP/Vertex AI (WIF) setup guide. Use for health-data systems. |
+| **[presentation-3d-story](presentation-3d-story/)** | ★★★★☆ | Deck → stops with an audience question each; argument map, spatial concepts, labelled illustrative dialogue. Use first when turning a presentation into a 3D journey. |
+| **[presentation-3d-design](presentation-3d-design/)** | ★★★★☆ | Visual direction for an immersive presentation: roles, composition, readable charts, RTL, motion as meaning. Use after the story plan. |
+| **[presentation-3d-build](presentation-3d-build/)** | ★★★★☆ | Three.js + HTML/SVG hybrid build: camera choreography, responsive fallbacks, measured performance, scoped static build. Use to implement the journey. |
+| **[presentation-3d-review](presentation-3d-review/)** | ★★★★☆ | Source-traceability audit + real browser pass + canonical-URL publication; ships `validate_journey.py`. Use before calling a 3D presentation done. |
 | **[python-windows](python-windows/)** | ★★★☆☆ | Use the `py` launcher for all Python on Windows. Use to avoid Store-Python stub failures. |
 | **[qualtrics-cleaning](qualtrics-cleaning/)** | ★★★★☆ | Import + clean Qualtrics data in R (merge branches/rounds, build scales). Use to clean survey exports. |
 | **[qualtrics-survey-builder](qualtrics-survey-builder/)** | ★★★★★ | Build/modify Qualtrics surveys via API v3 (safe update pattern, Hebrew RTL, branching). Use to create surveys programmatically. |

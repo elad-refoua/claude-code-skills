@@ -1,0 +1,6 @@
+interface:
+  display_name: "3D Journey: Story"
+  short_description: "Map source slides into a meaningful spatial story"
+  default_prompt: "Use $presentation-3d-story to plan a source-faithful 3D journey from this presentation."
+policy:
+  allow_implicit_invocation: true

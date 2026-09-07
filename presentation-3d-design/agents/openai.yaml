@@ -1,0 +1,6 @@
+interface:
+  display_name: "3D Journey: Design"
+  short_description: "Design cinematic scenes with clear readable evidence"
+  default_prompt: "Use $presentation-3d-design to design the scene, people, evidence panels and visual language for this journey."
+policy:
+  allow_implicit_invocation: true
