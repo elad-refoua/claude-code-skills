@@ -1,0 +1,6 @@
+interface:
+  display_name: "3D Journey: Review"
+  short_description: "Verify sources, interaction, rendering and publication"
+  default_prompt: "Use $presentation-3d-review to review this 3D journey against its source deck and actual browser behavior."
+policy:
+  allow_implicit_invocation: true

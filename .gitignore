@@ -1,0 +1,23 @@
+# Secrets and credentials never belong in this public repo
+.env
+.env.*
+*.pem
+*.key
+*credentials*
+*secret*
+.Renviron
+
+# Per-user caches that skills write as they learn
+learned_patterns.json
+
+# Caches and build output
+__pycache__/
+*.pyc
+node_modules/
+.playwright-mcp/
+
+# Windows reserved name
+nul
+
+# Local packaging helper, not part of the published skill
+audio-producer/share/

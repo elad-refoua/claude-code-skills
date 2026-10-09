@@ -1,0 +1,72 @@
+# APA 7th Edition -- Default Psychology Standard
+# This is the baseline profile. Other profiles override specific fields.
+
+name: "APA 7th Edition (Default)"
+abbreviation: "APA7"
+
+# Citation & References
+citation_style: "apa7"
+reference_format:
+  style: "apa7"
+  numbered: false
+  in_text: "author-year"
+  # Narrative: Author (Year)
+  # Parenthetical: (Author, Year)
+  # Possessive: Author's (Year)
+
+# Word Limits (generous defaults -- override per journal)
+word_limits:
+  abstract: 250
+  introduction: 3000
+  method: 2000
+  results: 3000
+  discussion: 3000
+  paper_total: 12000
+
+# Section Structure
+section_headings:
+  intro: "Introduction"
+  method: "Method"
+  participants: "Participants"
+  measures: "Measures"
+  procedure: "Procedure"
+  analytic_strategy: "Analytic Strategy"
+  results: "Results"
+  discussion: "Discussion"
+  limitations: "Limitations and Future Directions"
+headings_style: "title case"
+
+# Abstract
+abstract_format: "unstructured"
+# Single flowing paragraph, no sub-sections
+
+# Statistics Formatting
+stats_format:
+  p_value: "< .001 or = .XXX (no leading zero)"
+  confidence_interval: "95% CI [low, high]"
+  or_notation: "OR"
+  effect_size: "Cohen's d, eta-squared, R-squared"
+  decimal_places: 2
+  leading_zero: false  # APA removes leading zero for values that cannot exceed 1
+
+# Tables & Figures
+tables:
+  max_count: null  # No limit in APA
+  caption_position: "above"
+  notes_position: "below"
+  style: "three-line (top, header-separator, bottom)"
+figures:
+  caption_position: "below"
+  format: "PNG 300 DPI minimum"
+
+# Tone & Style
+tone: "Scholarly, precise, accessible to intelligent non-specialists"
+voice: "First person plural (We) for own work; passive for general statements"
+constraints:
+  - "Use 'association' not 'relationship' for cross-sectional data"
+  - "Report effect sizes for all statistical tests"
+  - "Tag every results paragraph as confirmatory or exploratory"
+  - "Hypotheses describe what was tested, not what was found"
+
+# Keywords
+keywords: 5

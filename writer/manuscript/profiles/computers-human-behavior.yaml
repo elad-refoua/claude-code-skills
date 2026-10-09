@@ -1,0 +1,85 @@
+# Computers in Human Behavior (Elsevier)
+# Applied tech-psychology -- APA style, broad audience
+
+name: "Computers in Human Behavior"
+abbreviation: "CHB"
+
+# Citation & References
+citation_style: "apa7"
+reference_format:
+  style: "apa7"
+  numbered: false
+  in_text: "author-year"
+  max_references: 80
+
+# Word Limits
+word_limits:
+  abstract: 150
+  introduction: 3000
+  method: 2000
+  results: 2500
+  discussion: 3000
+  paper_total: 10000
+
+# Section Structure
+section_headings:
+  intro: "Introduction"
+  theory: "Theoretical Background"
+  hypotheses: "The Present Study"
+  method: "Method"
+  participants: "Participants"
+  measures: "Measures"
+  procedure: "Procedure"
+  results: "Results"
+  discussion: "Discussion"
+  implications: "Practical Implications"
+  limitations: "Limitations and Future Research"
+  conclusions: "Conclusion"
+headings_style: "title case"
+
+# Abstract
+abstract_format: "unstructured"
+# Short, concise -- 150 words max
+
+# Statistics Formatting
+stats_format:
+  p_value: "p < .001 or p = .XXX"
+  confidence_interval: "95% CI [low, high]"
+  or_notation: "OR"
+  effect_size: "Report all available effect sizes"
+  decimal_places: 2
+  leading_zero: false
+
+# Tables & Figures
+tables:
+  max_count: 8
+  caption_position: "above"
+  style: "APA standard, three-line"
+figures:
+  max_count: 6
+  caption_position: "below"
+  format: "TIFF 300 DPI, EPS, or high-res PNG"
+
+# Tone & Style
+tone: "Applied, accessible, implications-focused"
+voice: "First person plural"
+constraints:
+  - "Emphasize practical implications -- what does this mean for design/policy?"
+  - "Theoretical Background section should build a clear model"
+  - "Connect to real-world technology use patterns"
+  - "Include a dedicated Practical Implications subsection"
+  - "Avoid overly narrow disciplinary jargon"
+  - "Elsevier Highlights: 3-5 bullet points (max 85 chars each) summarizing key findings"
+
+# Keywords
+keywords: 6
+
+# Special Notes
+special_notes: |
+  CHB values applied implications over pure theory.
+  Reviewers expect a clear theoretical model in the introduction.
+  Include Highlights (3-5 bullet-point findings) for Elsevier submission.
+  Data availability statement required.
+  CRediT author statement required.
+  Graphical abstract optional but recommended.
+  Journal has broad audience -- write accessibly.

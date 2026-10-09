@@ -1,0 +1,6 @@
+interface:
+  display_name: "3D Journey: Build"
+  short_description: "Build a fluid and efficient Three.js presentation"
+  default_prompt: "Use $presentation-3d-build to implement this presentation as an online 3D journey."
+policy:
+  allow_implicit_invocation: true

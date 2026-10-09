@@ -1,0 +1,48 @@
+{
+  "duration_seconds": 60,
+  "source_slides": [1, 2],
+  "preserve_order": true,
+  "facts": [
+    {
+      "id": "example-concept-a",
+      "source": "example-deck.pptx",
+      "locator": "slide 1",
+      "claim": "Fictional conceptual example: one object introduces a concept.",
+      "status": "verified"
+    },
+    {
+      "id": "example-concept-b",
+      "source": "example-deck.pptx",
+      "locator": "slide 2",
+      "claim": "Fictional conceptual example: two objects illustrate a relationship.",
+      "status": "verified"
+    }
+  ],
+  "stops": [
+    {
+      "id": "example-introduction",
+      "source_slides": [1],
+      "question": "What concept does this object introduce?",
+      "takeaway": "This is a fictional example of a conceptual introduction.",
+      "evidence_type": "theory",
+      "fact_ids": ["example-concept-a"],
+      "duration_seconds": 30,
+      "focus": "A single solid object beside a stable text surface.",
+      "transition_reason": "Move from introducing a concept to showing a relationship.",
+      "camera": {"position": [0, 1, 5], "target": [0, 1, 0]}
+    },
+    {
+      "id": "example-relationship",
+      "source_slides": [2],
+      "question": "How can a second object express a relationship?",
+      "takeaway": "This is a fictional example of a conceptual comparison.",
+      "evidence_type": "theory",
+      "fact_ids": ["example-concept-b"],
+      "duration_seconds": 30,
+      "focus": "Two solid objects with their labels simultaneously visible.",
+      "transition_reason": "Hold both objects in view to close the comparison.",
+      "camera": {"position": [6, 1, 5], "target": [6, 1, 0]}
+    }
+  ],
+  "assets": []
+}

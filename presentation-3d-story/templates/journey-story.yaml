@@ -1,0 +1,146 @@
+# Copy into the task's dated output folder; fill only relevant sections.
+# null means unknown/unfilled, never zero. Empty lists mean no entries yet.
+# This is an authoring template, not verified content or a production data file.
+intake:
+  source_deck: null
+  source_version: null
+  source_slide_order: []
+  project_instructions: []
+  audience: null
+  audience_prior_knowledge: []
+  purpose: null
+  duration_minutes: null
+  language: null
+  direction: null
+  required_credits: []
+  authorized_actions: []
+  output_folder: null
+  preserve_source_files: true
+  preserve_source_order: true
+  wording_to_preserve: []
+  existing_decisions: []
+  consequential_open_questions: []
+
+concepts:
+  - id: null
+    central_subject: null
+    world_and_visual_motif: null
+    audience_viewpoint: null
+    how_movement_explains_the_argument: null
+    fit_to_source_and_audience: null
+    representative_slice_stops: []
+    selected: false
+    selection_basis: null
+
+stops:
+  - id: null
+    source_slides: []
+    split_or_combination_reason: null
+    paper_id: null
+    audience_question: null
+    argument_job: null
+    prior_knowledge_needed: []
+    source_wording_to_preserve: []
+    title: null
+    short_navigation_label: null
+    plain_definition: null
+    main_finding_or_idea: null
+    meaning: null
+    # descriptive | association | experiment | theory | recommendation
+    evidence_type: null
+    # evidence_panel | conceptual_illustration | both; independent of evidence type
+    presentation_mode: null
+    essential_qualification: null
+    fact_ids: []
+    dialogue_id: null
+    metaphor_id: null
+    immediate_panel_copy: null
+    optional_detail_copy: null
+    speaker_notes: null
+    caption: null
+    camera_focus: null
+    # Complete stop budget, including its allocated transition time.
+    duration_seconds: null
+    # Filled from the implemented world, never guessed as research information.
+    camera:
+      position: null
+      target: null
+    motion_and_its_meaning: null
+    interaction_label_and_result: null
+    handoff_to_next_stop: null
+
+papers:
+  - id: null
+    title_verified_from_source: null
+    authors_verified_from_source: null
+    source_location: null
+    source_version: null
+    publication_status: unknown
+    status_verified_on: null
+    question_addressed: null
+    sample_relationship_to_other_papers: null
+
+facts:
+  - id: null
+    verification_status: unverified
+    source_file_or_url: null
+    exact_source_location: null
+    source_version: null
+    authority_basis: null
+    construct_and_actual_item_wording: null
+    population: null
+    sample_n: null
+    denominator: null
+    unit_counted: null
+    timeframe: null
+    response_options: []
+    multiple_response: null
+    estimate: null
+    estimate_type_and_unit: null
+    model_and_covariates: null
+    moderator_condition: null
+    uncertainty_as_reported: null
+    display_rounding: null
+    allowed_claim: null
+    unsupported_inference_to_avoid: null
+    unresolved_conflict_or_gap: null
+
+dialogue:
+  - id: null
+    context: null
+    # recurring_story | separate_illustration
+    continuity: null
+    construct_illustrated: null
+    fiction_label: null
+    turns:
+      - speaker_role: null
+        text: null
+    source_basis:
+      - location: null
+        published_or_aggregate_theme: null
+        population_tool_and_design_boundary: null
+    why_this_exchange_fits: null
+    claim_it_must_not_imply: null
+    rendering_budget: null
+
+metaphors:
+  - id: null
+    concept_or_role: null
+    visible_objects_and_action: null
+    explicit_mapping: null
+    # conceptual | quantitative; quantitative requires verified fact_ids
+    encoding_type: null
+    fact_ids: []
+    short_role_caption: null
+    coexistence_or_overlap: null
+    possible_misreading: null
+    boundary_sentence_if_needed: null
+
+review:
+  source_slide_coverage: unverified
+  requested_wording_changes_and_reasons: []
+  unresolved_claims: []
+  final_composed_surfaces_checked: []
+  copy_review_status: unreviewed
+  representative_slice_browser_status: unverified
+  handoff_to_design_build_review: null

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<title>studio</title>
+<style>
+  body { margin: 0; background: #151311; color: #d9cfc0; font: 14px/1.4 Segoe UI, sans-serif; }
+  canvas { display: block; width: 100%; max-width: 1920px; aspect-ratio: 16/9; background: #000; }
+  #ui { display: flex; gap: 10px; align-items: center; padding: 8px 12px; }
+  #scrub { flex: 1; }
+  #tl { font-variant-numeric: tabular-nums; min-width: 220px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="ui"><button id="play">play</button><input id="scrub" type="range" min="0" max="1" step="0.0001"><span id="tl"></span></div>
+<audio id="au" preload="auto"></audio>
+<script src="core.js"></script>
+<script src="timing.js"></script>
+<script src="config.js"></script>
+<script>
+// Loader: FILM.scripts (from config.js) are appended in order, then fonts load, then E.setup().
+// The headless renderer waits for window.__ready, then calls window.renderFrame(t).
+(async function () {
+  for (const s of FILM.scripts) {
+    await new Promise((ok, bad) => { const el = document.createElement('script'); el.src = s; el.onload = ok; el.onerror = () => bad(new Error('failed to load ' + s)); document.body.appendChild(el); });
+  }
+  await Promise.all((FILM.fonts || []).map(f => document.fonts.load(f)));
+  const canvas = document.getElementById('c');
+  E.setup(canvas, FILM.pal);
+  window.renderFrame = (t, q) => { const t0 = performance.now(); const shot = E.renderAt(t); const ms = performance.now() - t0; return { shot, ms, data: canvas.toDataURL('image/jpeg', q ?? 0.95) }; };
+  window.__ready = true;
+  if (new URLSearchParams(location.search).has('headless')) return;
+  // interactive scrubber (not used by the renderer)
+  const sc = document.getElementById('scrub'), tl = document.getElementById('tl'), au = document.getElementById('au'), pb = document.getElementById('play');
+  if (FILM.audio) au.src = FILM.audio;
+  let playing = false, t = +(localStorage.getItem('studio_t') || 0);
+  const draw = () => { const shot = E.renderAt(t); sc.value = t / FILM.dur; tl.textContent = t.toFixed(2) + ' s   ' + shot; localStorage.setItem('studio_t', t); };
+  sc.oninput = () => { t = sc.value * FILM.dur; au.currentTime = t; draw(); };
+  pb.onclick = () => { playing = !playing; pb.textContent = playing ? 'pause' : 'play'; if (playing) { au.currentTime = t; au.play().catch(() => {}); } else au.pause(); };
+  document.addEventListener('keydown', e => { if (e.key === ' ') pb.onclick(); if (e.key === 'ArrowRight') { t = Math.min(FILM.dur, t + (e.shiftKey ? 1 : 1 / FILM.fps)); draw(); } if (e.key === 'ArrowLeft') { t = Math.max(0, t - (e.shiftKey ? 1 : 1 / FILM.fps)); draw(); } });
+  const loop = () => { if (playing) { t = FILM.audio ? au.currentTime : Math.min(FILM.dur, t + 1 / FILM.fps); draw(); } requestAnimationFrame(loop); };
+  draw(); loop();
+})().catch(e => { window.__error = String(e && e.stack || e); console.error(e); });
+</script>
+</body>
+</html>
