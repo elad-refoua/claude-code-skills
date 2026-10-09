@@ -13,6 +13,9 @@ Convert HTML to PowerPoint (.pptx) with excellent Hebrew/RTL support using PptxG
 cd ~/.claude/skills/html-to-pptx && npm install
 ```
 
+Chromium's sandbox stays on, because the input may be an untrusted page. If Chrome cannot start (for
+example as root in a container), set `PUPPETEER_NO_SANDBOX=1` for that environment only.
+
 ## Quick Usage
 
 ### Basic conversion:

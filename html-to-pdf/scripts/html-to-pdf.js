@@ -34,6 +34,12 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+// Chromium's sandbox stays ON: the page may come from an untrusted URL or file.
+// Set PUPPETEER_NO_SANDBOX=1 only where the sandbox cannot run (e.g. root in a container).
+const SANDBOX_ARGS = process.env.PUPPETEER_NO_SANDBOX === '1'
+  ? ['--no-sandbox', '--disable-setuid-sandbox']
+  : [];
+
 // Parse command line arguments
 function parseArgs(args) {
   const options = {
@@ -190,8 +196,7 @@ async function convertHtmlToPdf(options) {
   const browser = await puppeteer.launch({
     headless: 'new',
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
+      ...SANDBOX_ARGS,
       '--font-render-hinting=none',
       '--disable-font-subpixel-positioning'
     ]

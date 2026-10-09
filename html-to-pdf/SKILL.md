@@ -196,6 +196,8 @@ Use CSS page-break properties:
 ## Technical Notes
 
 - Uses Puppeteer with Chrome headless for rendering
+- Chromium's sandbox stays on, because the input may be an untrusted page. If Chrome cannot start
+  (for example as root in a container), set `PUPPETEER_NO_SANDBOX=1` for that environment only.
 - Waits for `networkidle0` to ensure all resources load
 - Automatically waits for `document.fonts.ready`
 - Supports `@page` CSS rules for print styling
