@@ -50,6 +50,54 @@ with them.
 
 ---
 
+## 🎬 Featured: the film director and its studio
+
+**[film-director](film-director/)** is an agent that directs a whole film for you, from the brief to the delivered file.
+You tell it what the film is for; it decides how the film gets made, hands each part to the right builder, checks the
+result in code, and remembers what it learned for the next film.
+
+**What it does, step by step**
+1. **Recall.** Before anything else it reads its own memory of past films, so "good" means what worked before.
+2. **Brief.** It settles the brief from your files first and asks only what they cannot answer, one question at a time.
+   If a source you meant to send did not arrive, it stops and asks instead of building on a substitute.
+3. **Treatment.** It writes one `TREATMENT.md` per film (thesis, audience, one visual "spine", beats, look, voice,
+   music, length, delivery), gets your go on the structure, and tells you the price in time and agents before spending it.
+4. **Production, routed by form.** It picks the pipeline that fits the film and briefs the builder with everything it needs:
+
+| Form of the film | Built by | Type |
+|---|---|---|
+| Animation drawn entirely in code (cut paper, motion graphics, explainers, tributes, music videos) | [code-drawn-film](code-drawn-film/) | Skill |
+| A narrated video of illustrated frames or screenshots, from a script | [video-producer](video-producer/) | Agent |
+| A personal testimony or story, illustrated and narrated | [story-to-video](story-to-video/) | Agent |
+| AI live-action footage (Veo) and screen recordings | [ai-live-action-video](ai-live-action-video/) | Skill |
+| Every narration line, with a quality gate per take | [audio-producer](audio-producer/) | Skill |
+| Every word that is spoken or shown on screen | [writer](writer/) | Agent |
+| A data scene inside a film | [data-storytelling](data-storytelling/) | Skill |
+
+5. **Gates in code, before anyone watches it.** Each voice take is transcribed twice and checked for inserted words and
+   speaking rate; the mix keeps the voice at least 15 dB over the music at -16 LUFS; cuts, frozen frames, subtitles and
+   the total duration are measured. Then one blind reviewer, one fix round, and its own look at the contact sheets.
+6. **Delivery and memory.** It delivers once, and after every film it updates a per-film dossier and its own lessons,
+   taste notes and measured pipeline times, so the next film starts from what this one taught.
+
+**Built-in limits:** no fabricated facts or quotes, no cloned voice without a fresh yes for that film, no downloads,
+purchases or publishing without a yes, and no secrets in chat or files.
+
+**Install the whole studio**
+
+```bash
+git clone https://github.com/elad-refoua/claude-code-skills.git
+cp -r claude-code-skills/film-director ~/.claude/agents/
+cp -r claude-code-skills/{code-drawn-film,audio-producer,ai-live-action-video,data-storytelling,nano-banana-poster,gemini-consult,ffmpeg-motion-only,hebrew-docx,suno-instrumental-prompt,gh-pages-deploy} ~/.claude/skills/
+cp -r claude-code-skills/{video-producer,story-to-video,writer} ~/.claude/agents/
+```
+
+It needs `ffmpeg`, Python 3 (`pip install numpy pillow playwright && playwright install chromium`) and a
+`GEMINI_API_KEY` environment variable for narration and music. Full details: [film-director/README.md](film-director/README.md).
+Then say "make a video about ..." or "direct a film" in Claude Code.
+
+---
+
 ### Writing & references
 
 | Item | Type | Quality | What it does |
